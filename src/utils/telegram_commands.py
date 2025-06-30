@@ -1837,7 +1837,7 @@ TFPE (Trend Following Pullback Entry) 전략으로
                 if multi_manager.master_account:
                     master_summary = await multi_manager.get_account_summary('MASTER')
                     message += f"<b>🎆 마스터 계좌</b>\n"
-                    message += f"잘고: ${master_summary.get('balance', 0):.2f}\n"
+                    message += f"잔고: ${master_summary.get('balance', 0):.2f}\n"
                     message += f"포지션: {len(master_summary.get('positions', []))}개\n\n"
                 
                 # 서브 계좌

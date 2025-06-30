@@ -67,10 +67,21 @@ class Position:
         """딕셔너리 변환 - 개선된 버전"""
         data = asdict(self)
         # Enum 값들을 문자열로 변환
+        # status가 이미 문자열인 경우와 Enum인 경우 모두 처리
         if hasattr(self.status, 'value'):
             data['status'] = self.status.value
+        elif isinstance(self.status, str):
+            data['status'] = self.status
+        else:
+            data['status'] = str(self.status)
+            
+        # source도 동일하게 처리
         if hasattr(self.source, 'value'):
             data['source'] = self.source.value
+        elif isinstance(self.source, str):
+            data['source'] = self.source
+        else:
+            data['source'] = str(self.source)
         return data
     
     @classmethod
