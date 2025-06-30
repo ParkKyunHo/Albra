@@ -32,7 +32,7 @@ AlbraTrading은 AWS EC2에서 24/7 운영되는 개인용 바이낸스 자동 �
   - Master: TFPE (Trend Following with Price Extremes)
   - Sub1: ZLMACD_ICHIMOKU (ZL MACD + Ichimoku)
 
-## 🚀 배포 시스템 (2025-01-30 업데이트)
+## 🚀 배포 시스템 (2025-06-30 업데이트)
 
 ### Windows에서 WSL 프로젝트 배포
 프로젝트가 WSL 환경에 있을 때 발생하는 UNC 경로 문제를 해결하기 위해 배포 프로세스를 재설계했습니다.
