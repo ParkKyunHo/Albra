@@ -25,6 +25,39 @@ AlbraTrading은 AWS EC2에서 24/7 운영되는 개인용 바이낸스 자동 �
   - Master: TFPE (Trend Following with Price Extremes)
   - Sub1: ZLMACD_ICHIMOKU (ZL MACD + Ichimoku)
 
+## 🚀 배포 시스템 (2025-01-30 업데이트)
+
+### Windows에서 WSL 프로젝트 배포
+프로젝트가 WSL 환경에 있을 때 발생하는 UNC 경로 문제를 해결하기 위해 배포 프로세스를 재설계했습니다.
+
+#### 배포 구조
+```
+Windows (deploy.bat) → WSL (deploy_wsl.sh) → EC2
+```
+
+#### 주요 변경사항
+1. **deploy.bat / deploy_v2.bat**: 단순 WSL 호출자로 변경
+2. **scripts/deploy_wsl.sh**: 실제 배포 로직을 담은 bash 스크립트
+3. 모든 작업이 WSL 내부에서 수행되어 경로 문제 해결
+
+#### 사용 방법
+```batch
+# Windows 명령 프롬프트에서
+C:\> deploy_v2.bat
+```
+
+### 경로 관리
+| 환경 | 경로 | 사용자 |
+|------|------|--------|
+| 로컬 (WSL) | `/home/albra/AlbraTrading` | albra |
+| EC2 | `/home/ubuntu/AlbraTrading` | ubuntu |
+| Windows 접근 | `\\wsl.localhost\Ubuntu\home\albra\AlbraTrading` | - |
+
+### 주의사항
+- SSH 키는 WSL 내부 `~/.ssh/trading-bot-key`에 위치
+- 모든 Python 스크립트는 WSL Python으로 실행
+- systemd 서비스 파일은 EC2 버전 자동 선택
+
 ## 🏗️ 시스템 아키텍처
 
 ### 디렉토리 구조

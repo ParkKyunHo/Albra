@@ -1,0 +1,43 @@
+[Unit]
+Description=AlbraTrading Bot Service (Multi Account Mode) - Local
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=albra
+Group=albra
+WorkingDirectory=/home/albra/AlbraTrading
+Environment="PATH=/home/albra/AlbraTrading/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="PYTHONPATH=/home/albra/AlbraTrading"
+Environment="PYTHONUNBUFFERED=1"
+
+# 멀티 계좌 모드 실행
+ExecStart=/home/albra/AlbraTrading/venv/bin/python /home/albra/AlbraTrading/src/main.py
+
+# 재시작 정책
+Restart=always
+RestartSec=10
+
+# 로그 설정
+StandardOutput=append:/home/albra/AlbraTrading/logs/systemd_multi.log
+StandardError=append:/home/albra/AlbraTrading/logs/systemd_multi_error.log
+
+# 프로세스 제한
+LimitNOFILE=65536
+LimitNPROC=4096
+
+# 메모리 제한 (멀티 계좌는 더 많은 메모리 필요)
+MemoryLimit=4G
+
+# 실패 시 재시작 정책
+StartLimitInterval=300
+StartLimitBurst=5
+
+# 시그널 처리
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

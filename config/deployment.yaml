@@ -1,0 +1,59 @@
+# AlbraTrading Deployment Configuration
+# 환경별 경로 및 설정 관리
+
+environments:
+  local:
+    # 로컬 개발 환경 (Windows WSL)
+    base_path: /home/albra/AlbraTrading
+    user: albra
+    group: albra
+    python_path: /home/albra/AlbraTrading/venv/bin/python
+    service_path: /etc/systemd/system
+    
+  ec2:
+    # AWS EC2 프로덕션 환경
+    base_path: /home/ubuntu/AlbraTrading
+    user: ubuntu
+    group: ubuntu
+    python_path: /home/ubuntu/AlbraTrading/venv/bin/python
+    service_path: /etc/systemd/system
+    
+  windows:
+    # Windows 개발 환경 (deploy.bat 실행 위치)
+    base_path: C:\AlbraTrading
+    ssh_key: "%USERPROFILE%\.ssh\trading-bot-key"
+    
+deployment:
+  # EC2 연결 정보
+  ec2_ip: 3.39.88.164
+  ssh_user: ubuntu
+  
+  # 파일 동기화 설정
+  exclude_patterns:
+    - "*.pyc"
+    - "__pycache__"
+    - ".env"
+    - "venv/"
+    - "logs/"
+    - "state/"
+    - "data/"
+    - ".git/"
+    
+  # 서비스 설정
+  service_names:
+    single: albratrading-single
+    multi: albratrading-multi
+    
+  # 배포 전 체크리스트
+  pre_deploy_checks:
+    - verify_code
+    - check_dependencies
+    - validate_config
+    - backup_state
+    
+  # 배포 후 체크리스트
+  post_deploy_checks:
+    - service_status
+    - api_health
+    - log_errors
+    - telegram_notification
