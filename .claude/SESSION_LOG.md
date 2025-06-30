@@ -23,6 +23,9 @@
 - 2025-07-01 02:55:00 KST: Git hooks 무한 루프 문제 해결
   - .git/hooks/: post-commit (amend 제거, 플래그 시스템 적용)
 
+- 2025-07-01 02:51:23 KST: [0284d4c] fix: Git hooks 무한 루프 문제 해결 및 세션 로그 정리
+  - .claude/: SESSION_LOG.md
+
 ### 주요 성과
 1. ✅ Position Status Enum 오류 해결 - to_dict() 메서드에서 enum과 string 모두 처리
 2. ✅ 텔레그램 "잘고" → "잔고" 타이포 수정

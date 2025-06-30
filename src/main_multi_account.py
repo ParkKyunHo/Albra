@@ -44,7 +44,7 @@ from src.monitoring.position_sync_monitor import PositionSyncMonitor
 from src.monitoring.health_checker import SystemHealthChecker
 from src.core.mdd_manager_improved import ImprovedMDDManager
 from src.strategies.strategy_factory import get_strategy_factory
-from src.strategies.strategy_config import get_strategy_config
+from src.strategies.strategy_config import StrategyConfigManager
 from src.web.dashboard import DashboardManager
 
 # Phase 2 imports
@@ -449,10 +449,7 @@ class MultiAccountTradingSystem:
                 logger.info(f"전략 초기화: {strategy_name}")
                 
                 # 전략 설정 가져오기
-                full_config = get_strategy_config(
-                    strategy_name, 
-                    self.config_manager.config
-                )
+                full_config = self.config_manager.get_strategy_config(strategy_name)
                 
                 # 전략 인스턴스 생성
                 strategy_factory = get_strategy_factory()
@@ -498,10 +495,7 @@ class MultiAccountTradingSystem:
                     continue
                 
                 # 전략 설정 가져오기
-                full_config = get_strategy_config(
-                    strategy_name, 
-                    self.config_manager.config
-                )
+                full_config = self.config_manager.get_strategy_config(strategy_name)
                 
                 # 계좌별 설정 오버라이드
                 full_config['leverage'] = account.leverage
