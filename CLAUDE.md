@@ -1,5 +1,12 @@
 # AlbraTrading System - Claude Code Context
 
+## ⏰ 시간대 설정
+- **모든 날짜/시간은 한국 표준시(KST, UTC+9) 기준**
+- **날짜 형식**: YYYY-MM-DD (예: 2025-01-30)
+- **시간 형식**: HH:MM:SS (24시간제, 예: 15:45:30)
+- **타임스탬프 형식**: YYYY-MM-DD HH:MM:SS KST
+- **작업 기록 시 반드시 KST 기준으로 기록**
+
 ## 👤 시스템 전문성 및 페르소나
 
 **당신은 15년 경력의 바이낸스 및 나스닥 선물 전문 트레이더이자 고빈도 거래 시스템(HFT) 개발자입니다.**
@@ -39,6 +46,16 @@ Windows (deploy.bat) → WSL (deploy_wsl.sh) → EC2
 1. **deploy.bat / deploy_v2.bat**: 단순 WSL 호출자로 변경
 2. **scripts/deploy_wsl.sh**: 실제 배포 로직을 담은 bash 스크립트
 3. 모든 작업이 WSL 내부에서 수행되어 경로 문제 해결
+4. **권한 문제 해결**: sudo 명령 추가로 로그 디렉토리 권한 문제 해결
+
+#### SSH 키 설정 (2025-01-30 15:20 KST)
+```bash
+# WSL에 SSH 키 설정
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+cp /mnt/c/Users/박균호/.ssh/trading-bot-key ~/.ssh/
+chmod 600 ~/.ssh/trading-bot-key
+```
 
 #### 사용 방법
 ```batch
@@ -57,6 +74,7 @@ C:\> deploy_v2.bat
 - SSH 키는 WSL 내부 `~/.ssh/trading-bot-key`에 위치
 - 모든 Python 스크립트는 WSL Python으로 실행
 - systemd 서비스 파일은 EC2 버전 자동 선택
+- 배포 시 로그 파일 권한은 sudo로 처리
 
 ## 🏗️ 시스템 아키텍처
 
@@ -393,12 +411,38 @@ python3 scripts/update_project_status.py --commit
 4. **결정 문서화**: ADR (Architecture Decision Records) 사용
 5. **자동화 원칙**: 두 번 이상 반복하면 자동화
 
+## 📝 세션 로그 자동화 (2025-01-30 16:00 KST 구현)
+
+### 자동 기록 시스템
+커밋할 때마다 자동으로 작업 내역이 SESSION_LOG.md에 기록됩니다.
+
+#### 구성 요소
+- **post-commit hook**: 커밋 후 자동으로 트리거
+- **scripts/update_session_log.py**: 커밋 정보를 세션 로그에 추가
+- **형식**: `- YYYY-MM-DD HH:MM:SS: [해시] 커밋 메시지`
+
+#### 작동 방식
+1. `git commit` 실행
+2. post-commit hook 트리거
+3. update_session_log.py 실행 (커밋 정보 수집)
+4. SESSION_LOG.md 자동 업데이트
+5. 변경사항을 같은 커밋에 포함 (`--amend`)
+6. GitHub 자동 푸시
+
+#### 기록되는 정보
+- 커밋 시간 (KST 기준)
+- 커밋 해시 (7자리)
+- 커밋 메시지
+- 주요 변경 파일 (카테고리별 정리)
+
 ## 🔗 관련 문서
 
 - [README.md](./README.md) - 전체 시스템 소개
 - [PROJECT_GUIDELINES.md](./PROJECT_GUIDELINES.md) - 개발 가이드라인
 - [MULTI_STRATEGY_QUICK_REF.md](./MULTI_STRATEGY_QUICK_REF.md) - 멀티 전략 참조
-- [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) - 배포 가이드
+- [DEPLOYMENT_GUIDE.md](./docs/DEPLOYMENT_GUIDE.md) - 배포 가이드
+- [SESSION_LOG.md](./.claude/SESSION_LOG.md) - 작업 세션 기록
+- [DEPLOYMENT_NOTES.md](./.claude/DEPLOYMENT_NOTES.md) - 배포 상세 노트
 
 ## 📞 연락처
 
