@@ -39,7 +39,7 @@ from src.utils.smart_notification_manager import SmartNotificationManager
 from src.core.state_manager import StateManager
 from src.core.binance_api import BinanceAPI
 from src.core.position_manager import PositionManager
-from src.core.position_monitor import PositionMonitor
+# from src.core.position_monitor import PositionMonitor  # Deprecated
 from src.monitoring.position_sync_monitor import PositionSyncMonitor
 from src.monitoring.health_checker import SystemHealthChecker
 from src.core.mdd_manager_improved import ImprovedMDDManager
@@ -155,7 +155,6 @@ class MultiAccountTradingSystem:
         self.unified_api: Optional[UnifiedBinanceAPI] = None
         
         # 모니터링 컴포넌트
-        self.position_monitor: Optional[PositionMonitor] = None
         self.position_sync_monitor: Optional[PositionSyncMonitor] = None
         self.health_checker: Optional[SystemHealthChecker] = None
         self.mdd_manager: Optional[ImprovedMDDManager] = None
@@ -239,7 +238,8 @@ class MultiAccountTradingSystem:
             # Smart Notification Manager
             self.notification_manager = SmartNotificationManager(
                 telegram_notifier=self.telegram_notifier,
-                config=config.get('smart_notification', {})
+                database_manager=None,
+                config_manager=self.config_manager
             )
             logger.info("✓ Smart Notification Manager 초기화 완료")
             
@@ -397,20 +397,10 @@ class MultiAccountTradingSystem:
     async def _initialize_monitoring_components(self) -> None:
         """모니터링 컴포넌트 초기화"""
         try:
-            # 1. Position Monitor
-            self.position_monitor = PositionMonitor(
-                position_manager=self.unified_position_manager,
-                binance_api=self.unified_api,
-                notification_manager=self.notification_manager,
-                state_manager=self.state_manager,
-                config_manager=self.config_manager
-            )
-            await self.position_monitor.initialize()
-            logger.info("✓ Position Monitor 초기화 완료")
-            
-            # 2. Position Sync Monitor
+            # 1. Position Sync Monitor
             self.position_sync_monitor = PositionSyncMonitor(
                 position_manager=self.unified_position_manager,
+                binance_api=self.unified_api,
                 notification_manager=self.notification_manager
             )
             logger.info("✓ Position Sync Monitor 초기화 완료")
