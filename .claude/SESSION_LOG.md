@@ -30,6 +30,9 @@
   - src/: main_multi_account.py
   - .claude/: SESSION_LOG.md
 
+- 2025-07-01 03:15:31 KST: [0a5a88c] fix: requirements.txt 중복 패키지 제거
+  - .claude/: SESSION_LOG.md
+
 ### 주요 성과
 1. ✅ Position Status Enum 오류 해결 - to_dict() 메서드에서 enum과 string 모두 처리
 2. ✅ 텔레그램 "잘고" → "잔고" 타이포 수정

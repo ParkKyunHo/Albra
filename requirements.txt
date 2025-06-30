@@ -36,7 +36,7 @@ matplotlib==3.7.2  # 차트 생성 (백테스팅용) (추가)
 seaborn==0.12.2  # 차트 스타일링 (추가)
 
 # Async Support
-aiohttp==3.8.5  # 비동기 HTTP 요청 (추가)
+aiohttp==3.10.11  # 비동기 HTTP 요청 (추가)
 aiodns==3.0.0  # 비동기 DNS 해석 (추가)
 aiofiles==23.2.1  # 비동기 파일 I/O (추가)
 
