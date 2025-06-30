@@ -45,7 +45,7 @@ from src.monitoring.health_checker import SystemHealthChecker
 from src.core.mdd_manager_improved import ImprovedMDDManager
 from src.strategies.strategy_factory import get_strategy_factory
 from src.strategies.strategy_config import StrategyConfigManager
-from src.web.dashboard import DashboardManager
+from src.web.dashboard import DashboardApp
 
 # Phase 2 imports
 from src.core.multi_account.account_manager import MultiAccountManager
@@ -164,7 +164,7 @@ class MultiAccountTradingSystem:
         self.strategies: Dict[str, Any] = {}
         
         # 웹 대시보드
-        self.dashboard: Optional[DashboardManager] = None
+        self.dashboard: Optional[DashboardApp] = None
         
         # 태스크 관리
         self.tasks: List[asyncio.Task] = []
@@ -531,13 +531,11 @@ class MultiAccountTradingSystem:
             dashboard_config = self.config_manager.config.get('web_dashboard', {})
             
             if dashboard_config.get('enabled', False):
-                self.dashboard = DashboardManager(
-                    host=dashboard_config.get('host', '0.0.0.0'),
-                    port=dashboard_config.get('port', 5000),
-                    position_manager=self.unified_position_manager,
-                    binance_api=self.unified_api,
-                    strategies=self.strategies
-                )
+                self.dashboard = DashboardApp()
+                self.dashboard.position_manager = self.unified_position_manager
+                self.dashboard.binance_api = self.unified_api
+                self.dashboard.strategies = self.strategies
+                self.dashboard.config = self.config_manager.config
                 logger.info("✓ 웹 대시보드 초기화 완료")
             
         except Exception as e:
