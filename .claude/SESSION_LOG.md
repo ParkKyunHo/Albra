@@ -56,6 +56,10 @@
   - src/: main_multi_account.py
   - .claude/: SESSION_LOG.md
 
+- 2025-07-01 04:06:10 KST: [8ccdd7d] fix: 시스템 설계를 고려한 모니터링 및 종료 처리 개선
+  - src/: main_multi_account.py
+  - .claude/: SESSION_LOG.md
+
 ### 주요 성과
 1. ✅ Position Status Enum 오류 해결 - to_dict() 메서드에서 enum과 string 모두 처리
 2. ✅ 텔레그램 "잘고" → "잔고" 타이포 수정

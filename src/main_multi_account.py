@@ -716,12 +716,20 @@ class MultiAccountTradingSystem:
             
             # 5. 웹 대시보드
             if self.dashboard:
-                task = asyncio.create_task(
-                    self.dashboard.run(),
+                # Flask는 블로킹 호출이므로 별도 스레드에서 실행
+                from threading import Thread
+                dashboard_thread = Thread(
+                    target=lambda: self.dashboard.app.run(
+                        host='0.0.0.0', 
+                        port=5000, 
+                        debug=False,
+                        use_reloader=False
+                    ),
+                    daemon=True,
                     name="dashboard"
                 )
-                main_tasks.append(task)
-                self.tasks.append(task)
+                dashboard_thread.start()
+                logger.info("웹 대시보드 시작 (포트: 5000)")
             
             # 6. 정기 상태 리포트
             task = asyncio.create_task(
@@ -1015,7 +1023,7 @@ class MultiAccountTradingSystem:
                     event_type="SYSTEM_SHUTDOWN",
                     title="🛑 시스템 종료",
                     message=f"<b>종료 사유:</b> {reason.value}\n<b>실행 시간:</b> {self.metrics.to_dict()['uptime_hours']}시간",
-                    priority="HIGH"
+                    force=True
                 )
             
             # 알림 시스템 정리
