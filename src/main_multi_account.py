@@ -415,9 +415,8 @@ class MultiAccountTradingSystem:
             
             # 4. MDD Manager
             self.mdd_manager = ImprovedMDDManager(
-                position_manager=self.unified_position_manager,
-                notification_manager=self.notification_manager,
-                config=self.config_manager.config.get('mdd_protection', {})
+                config=self.config_manager.config.get('mdd_protection', {}),
+                notification_manager=self.notification_manager
             )
             await self.mdd_manager.initialize()
             logger.info("✓ MDD Manager 초기화 완료")

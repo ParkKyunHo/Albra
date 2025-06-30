@@ -44,6 +44,10 @@
   - src/: main_multi_account.py
   - .claude/: SESSION_LOG.md
 
+- 2025-07-01 03:37:37 KST: [91c5fa0] fix: 배포 검증 스크립트 Event loop 오류 수정
+  - scripts/: pre_deploy_check.sh
+  - .claude/: SESSION_LOG.md
+
 ### 주요 성과
 1. ✅ Position Status Enum 오류 해결 - to_dict() 메서드에서 enum과 string 모두 처리
 2. ✅ 텔레그램 "잘고" → "잔고" 타이포 수정
