@@ -1,0 +1,710 @@
+# config/config.yaml
+# AlbraTrading System Configuration v2.0
+
+# 멀티 계좌 설정 (Phase 2)
+multi_account:
+  enabled: true  # 멀티 계좌 기능 활성화
+  mode: "multi"  # "single" 또는 "multi" (멀티 모드 활성화)
+  
+  # 서브 계좌 설정 (딕셔너리 형식으로 변경)
+  sub_accounts:
+    sub1:
+      account_id: "sub1"
+      email: "sub1@albratrading.com"
+      type: "SUB_FUTURES"
+      api_key: "${SUB1_API_KEY}"       # .env 파일에서 로드
+      api_secret: "${SUB1_API_SECRET}" # .env 파일에서 로드
+      testnet: false
+      enabled: true
+      strategy: "ZLMACD_ICHIMOKU"  # ZL MACD + Ichimoku 전략
+      symbols:
+        - "BTCUSDT"
+      leverage: 8              # 전략과 동일
+      position_size: 15        # 기본 포지션 크기 15%
+      max_positions: 2         # 최대 2개 포지션
+      daily_loss_limit: 3.0    # 일일 손실 한도 3%
+      max_drawdown: 20.0       # 최대 DD 20%
+      
+    sub2:
+      account_id: "sub2"
+      email: "sub2@albratrading.com"
+      type: "SUB_FUTURES"
+      api_key: "${SUB2_API_KEY}"
+      api_secret: "${SUB2_API_SECRET}"
+      testnet: false
+      enabled: false             # 필요시 활성화
+      strategy: "MOMENTUM"       # Momentum 전략
+      symbols:
+        - "BTCUSDT"
+        - "ETHUSDT"
+      leverage: 10               # 전략과 동일
+      position_size: 20          # 기본 포지션 크기 20%
+      max_positions: 2           # 최대 2개 포지션
+      daily_loss_limit: 3.0      # 일일 손실 한도 3%
+      max_drawdown: 20.0         # 최대 DD 20%
+  
+  # 통합 리스크 관리 (모니터링 및 권고만 제공)
+  # 주의: 실제 거래 결정은 각 전략이 독립적으로 수행
+  risk_monitoring:
+    enabled: true
+    check_interval: 30     # 30초마다 체크
+    portfolio_limits:      # 권고 기준 (강제 사항 아님)
+      max_total_exposure_pct: 150    # 전체 포트폴리오 최대 노출 150%
+      max_correlation: 0.8           # 계좌 간 최대 상관관계
+      max_concentration_pct: 50      # 단일 계좌 최대 비중 50%
+  
+  # 통합 모니터링
+  unified_monitoring:
+    enabled: true
+    interval: 60           # 60초마다 모니터링
+    report_interval: 3600  # 1시간마다 리포트
+
+# 시스템 설정
+system:
+  mode: "live"  # testnet 또는 live
+  debug: false
+  timezone: "Asia/Seoul"
+  log_level: "info"
+
+# 거래 설정
+trading:
+  max_positions: 3  # 최대 동시 포지션 수
+  check_interval: 60  # 기본 체크 간격 (초)
+  max_total_usage: 90  # 전체 자금의 최대 사용 비율 (%)
+  
+# 알림 설정
+telegram:
+  enabled: true
+  # bot_token과 chat_id는 .env 파일에서 로드
+  
+  # 알림 우선순위 설정
+  priority_levels:
+    CRITICAL:
+      enabled: true
+      rate_limit: 0  # 제한 없음
+    HIGH:
+      enabled: true
+      rate_limit: 10  # 분당 10개
+    MEDIUM:
+      enabled: true
+      rate_limit: 5
+    LOW:
+      enabled: true
+      rate_limit: 2
+
+# 스마트 알림 설정
+smart_notification:
+  # 요약 설정
+  summary_interval: 3600  # 1시간마다 요약 전송
+  alert_cooldown: 300     # 동일 알림 쿨다운 (5분)
+  
+  # 이벤트 ID 관리
+  event_id_ttl: 600       # 이벤트 ID 만료 시간 (10분)
+  max_event_ids: 1000     # 최대 저장 이벤트 ID 개수
+  
+  # 재시도 설정 (Exponential Backoff)
+  max_retry_attempts: 3   # 최대 재시도 횟수
+  retry_base_delay: 1.0   # 기본 재시도 대기 시간 (초)
+  retry_max_delay: 30.0   # 최대 재시도 대기 시간 (초)
+
+# 웹 대시보드
+web_dashboard:
+  enabled: true
+  host: "0.0.0.0"
+  port: 5000
+  update_interval: 5  # 초
+
+# 시장 레짐 분석 설정 (새로 추가)
+market_regime:
+  enabled: true
+  check_interval: 1800  # 30분마다 체크
+  
+  # 레짐 판단 파라미터
+  adx_strong_trend: 30
+  adx_weak_trend: 20
+  atr_high_volatility: 2.0  # 평균 대비 2배
+  atr_low_volatility: 0.5   # 평균 대비 0.5배
+  channel_trend_threshold: 0.7
+  channel_range_threshold: 0.05
+  rsi_trend_bias: 10
+  momentum_strong: 5.0
+  momentum_weak: 2.0
+  
+  # 레짐별 조정 파라미터
+  regime_adjustments:
+    strong_trend:
+      position_size_multiplier: 1.2
+      signal_threshold_adjustment: -1
+      stop_loss_multiplier: 1.5
+      take_profit_multiplier: 2.0
+    weak_trend:
+      position_size_multiplier: 1.0
+      signal_threshold_adjustment: 0
+      stop_loss_multiplier: 1.0
+      take_profit_multiplier: 1.5
+    range_bound:
+      position_size_multiplier: 0.8
+      signal_threshold_adjustment: 1
+      stop_loss_multiplier: 0.8
+      take_profit_multiplier: 1.0
+    high_volatility:
+      position_size_multiplier: 0.6
+      signal_threshold_adjustment: 1
+      stop_loss_multiplier: 2.0
+      take_profit_multiplier: 1.5
+    low_volatility:
+      position_size_multiplier: 1.0
+      signal_threshold_adjustment: 0
+      stop_loss_multiplier: 0.7
+      take_profit_multiplier: 0.8
+
+# 성과 추적 설정 (새로 추가)
+historical_performance:
+  enabled: true
+  data_dir: "data/performance"
+  
+  # Kelly Criterion 파라미터
+  kelly_params:
+    max_fraction: 0.25       # 최대 Kelly 비율 (25%)
+    confidence_threshold: 30 # 최소 거래 수
+    lookback_days: 90       # 분석 기간 (90일)
+    safety_factor: 0.5      # 안전 계수
+  
+  # 성과 보고 설정
+  reporting:
+    daily_report: true
+    weekly_summary: true
+    monthly_analysis: true
+
+# Performance Tracking 설정 (호환성을 위해 추가)
+performance_tracking:
+  data_dir: "data/performance"
+  auto_save_interval: 300
+  kelly:
+    max_fraction: 0.25
+    confidence_factor: 0.5
+    min_trades_required: 20
+
+# 리스크 패리티 설정 (새로 추가)
+risk_parity:
+  enabled: true  # 기본 비활성화 (선택적 기능)
+  
+  # 패리티 파라미터
+  min_history_days: 30      # 최소 분석 기간
+  max_allocation: 0.5       # 단일 전략 최대 배분 (50%)
+  min_allocation: 0.1       # 단일 전략 최소 배분 (10%)
+  rebalance_threshold: 0.1  # 재배분 임계값 (10% 차이)
+  lookback_window: 60       # 변동성 계산 기간 (일)
+  correlation_penalty: 0.2  # 상관관계 페널티
+  target_volatility: 0.15   # 목표 연간 변동성 (15%)
+
+# 동적 포지션 사이징 글로벌 설정 (새로 추가)
+dynamic_position_sizing:
+  global_enabled: true      # 전체 시스템 활성화
+  
+  # 포지션 크기 제한
+  global_min_size: 10       # 전역 최소 포지션 크기 (10%)
+  global_max_size: 50       # 전역 최대 포지션 크기 (50%)
+  
+  # Kelly Criterion 글로벌 설정
+  use_kelly: true
+  kelly_confidence_required: 30  # 최소 거래 수
+  kelly_max_bet: 0.25           # 최대 베팅 비율
+  
+  # 시장 레짐 적용
+  use_market_regime: true
+  
+  # MDD 적용
+  use_mdd_adjustment: true
+  
+  # 리스크 패리티 적용
+  use_risk_parity: false  # 선택적
+
+# 전략 설정
+strategies:
+  # TFPE Donchian Channel 전략
+  tfpe:
+    enabled: true
+    leverage: 10  # 백테스트 개선: 15 → 10
+    position_size: 24  # 계좌의 24%
+    
+    # 리스크 관리 독립성 설정
+    pause_on_high_risk: true  # HIGH 리스크 시 거래 중단 (전략별 설정 가능)
+    
+    # 추세 모드
+    trend_mode: "donchian"  # donchian 또는 ma
+    
+    # 신호 파라미터
+    signal_threshold: 4  # 백테스트 개선: 3 → 4 (신호 품질 상향)
+    min_momentum: 2.0  # 최소 모멘텀 2%
+    volume_spike: 1.5  # 볼륨 스파이크 1.5배
+    ema_distance_max: 0.015  # EMA 거리 최대 1.5%
+    
+    # Donchian Channel 파라미터
+    dc_period: 20  # Donchian 기간
+    price_position_high: 0.7  # 숏 진입 가격 위치
+    price_position_low: 0.3   # 롱 진입 가격 위치
+    price_position_neutral_min: 0.4
+    price_position_neutral_max: 0.6
+    channel_width_threshold: 0.05  # 채널폭 임계값 5%
+    
+    # RSI 파라미터
+    rsi_pullback_long: 40   # 롱 진입 RSI
+    rsi_pullback_short: 60  # 숏 진입 RSI
+    rsi_neutral_long: 20    # 좁은 채널 롱 RSI
+    rsi_neutral_short: 80   # 좁은 채널 숏 RSI
+    
+    # 횡보장 RSI 극단값 (백테스팅과 동일하게 추가)
+    rsi_oversold: 30        # 과매도 기준
+    rsi_overbought: 70      # 과매수 기준
+    
+    # 피보나치 파라미터 (백테스팅과 동일하게 추가)
+    fib_min: 0.382          # 최소 되돌림
+    fib_max: 0.786          # 최대 되돌림
+    
+    # 손절/익절 (백테스팅과 동일하게 수정)
+    stop_loss_atr: 1.5      # ATR x 1.5
+    take_profit_atr: 5.0    # 백테스트 개선: 3.0 → 5.0 (손익비 개선)
+    
+    # 기타 파라미터
+    adx_min: 25  # 백테스트 개선: 20 → 25 (추세 강도 상향)
+    min_signal_interval: 4  # 최소 신호 간격 (시간) - 백테스팅과 동일
+    swing_period: 20        # 스윙 하이/로우 기간 (추가)
+    momentum_lookback: 20   # 모멘텀 계산 기간 (추가)
+    
+    # 트레이딩 모드 설정
+    trading_mode: "candle_close"  # candle_close 또는 realtime
+    
+    # 캔들 종가 체크 설정
+    candle_close_check:
+      enabled: true
+      check_window_seconds: 45  # 캔들 완성 후 45초 이내 체크 (더 안전하게)
+      use_server_time: true     # 바이낸스 서버 시간 사용
+      api_delay_tolerance: 5    # API 지연 허용 시간 (초)
+      preparation_seconds: 10   # 캔들 종가 전 준비 시간 (14분 50초부터)
+    
+    # 실시간 모니터링 설정 (향후 사용)
+    realtime_enabled: false  # 현재는 비활성화
+    
+    # 빠른 신호 체크 임계값
+    quick_rsi_oversold: 35      # RSI 과매도 (빠른 체크)
+    quick_rsi_overbought: 65    # RSI 과매수 (빠른 체크)
+    price_spike_threshold: 0.01  # 1% 가격 급변
+    realtime_cooldown: 30       # 신호 쿨다운 (초)
+    
+    # WebSocket 설정
+    websocket:
+      reconnect_attempts: 10    # 재연결 시도 횟수
+      reconnect_delay: 5        # 재연결 대기 시간 (초)
+      
+    # 하이브리드 모드 설정
+    hybrid_mode:
+      enabled: true             # 실시간 + 주기적 체크 병행
+      periodic_interval: 60     # 주기적 체크 간격 (초)
+      sync_interval: 300        # 전체 동기화 간격 (초)
+    
+    # 거래할 코인 목록
+    major_coins:
+      - BTCUSDT
+      # ETHUSDT
+      # BNBUSDT
+      # SOLUSDT
+      #- XRPUSDT
+      #- ADAUSDT
+      # - DOGEUSDT
+      # - AVAXUSDT
+      # - DOTUSDT
+      # - MATICUSDT
+    
+    # 시스템 상태 리포트 설정
+    status_report:
+      min_interval: 1500    # 최소 전송 간격 (25분)
+      max_interval: 2100    # 최대 전송 간격 (35분)
+      
+    # 데이터 수집 설정
+    data_collection:
+      klines_15m_limit: 1344  # 15분봉 수집 개수 (2주)
+    
+    # 전략별 동적 포지션 사이징 설정
+    dynamic_position_sizing:
+      enabled: true              # 동적 사이징 활성화
+      min_position_size: 10      # 최소 포지션 크기 10%
+      max_position_size: 40      # 최대 포지션 크기 40%
+      use_market_regime: true    # 시장 레짐 적용
+      use_mdd_adjustment: true   # MDD 조정 적용
+      use_risk_parity: false     # 리스크 패리티 적용 (선택적)
+
+  # Momentum Breakout 전략
+  momentum:
+    enabled: true  # 기본값 비활성화 (TFPE만 사용)
+    leverage: 10  # 백테스트와 동일
+    position_size: 20  # 계좌의 20%
+    
+    # 돌파 파라미터
+    adx_min: 35  # 강한 추세만 (30 → 35)
+    di_diff: 15  # 명확한 방향성 (10 → 15)
+    volume_spike: 2.0  # 거래량 2배
+    acceleration: 1.5  # 가속도 1.5배
+    
+    # 손절/익절
+    stop_loss_atr: 2.0  # ATR x 2.0
+    take_profit_atr: 6.0  # ATR x 6.0
+    
+    # 추적 손절
+    trailing_enabled: true
+    trailing_start: 1.5  # 1.5 ATR부터 시작
+    trailing_step: 0.5   # 0.5 ATR 단위로 이동
+    
+    # Donchian Channel 파라미터
+    dc_period: 20
+    strong_trend_channel_width: 0.08  # 8%
+    strong_trend_price_extreme: 0.1   # 10%
+    
+    # 기타 파라미터
+    min_signal_interval: 4  # 최소 신호 간격 (시간)
+    
+    # 거래할 코인 목록
+    trading_coins:
+      - BTCUSDT
+      # ETHUSDT
+      # BNBUSDT
+      # SOLUSDT
+    
+    # 동적 포지션 사이징 설정
+    dynamic_position_sizing:
+      enabled: true
+      kelly_fraction: 0.25
+      target_volatility: 0.15
+      min_position_size: 10
+      max_position_size: 30  # Momentum은 최대 30%
+      use_risk_parity: true
+
+  # ZLHMA 50-200 EMA Cross 전략 (새로 추가)
+  zlhma_ema_cross:
+    enabled: false  # 초기에는 비활성화, 테스트 후 활성화
+    leverage: 10    # 백테스트 기준 안전한 레버리지
+    position_size: 20  # 계좌의 20% (보수적 시작)
+    
+    # 리스크 관리 독립성 설정
+    pause_on_high_risk: false  # HIGH 리스크에서도 계속 거래 (더 공격적)
+    
+    # 타임프레임별 캔들 수 (turtle_trading_strategy.py 참조)
+    candles_per_day: 24  # 1시간봉 기준
+    
+    # ZLHMA 파라미터
+    zlhma_period: 14  # Zero Lag Hull MA 기간
+    
+    # EMA 파라미터
+    fast_ema_period: 50   # 단기 EMA
+    slow_ema_period: 200  # 장기 EMA
+    
+    # ADX 필터 (심볼별 조정 가능)
+    adx_period: 14
+    adx_threshold: 25  # BTC 기본값
+    
+    # 신호 강도
+    signal_strength_threshold: 2.5  # 최소 신호 강도
+    
+    # 손절/익절 (ATR 기반)
+    stop_loss_atr: 1.5    # ATR x 1.5 (동적 손절)
+    take_profit_atr: 5.0  # ATR x 5.0 (손익비 개선)
+    
+    # 트레일링 스톱
+    trailing_stop_activation: 0.03  # 3% 수익 시 활성화
+    trailing_stop_distance: 0.10    # 최고점에서 10% 하락
+    
+    # 부분 익절 (3단계)
+    partial_exit_levels:
+      - profit_pct: 5.0
+        exit_ratio: 0.25  # 5%에서 25% 익절
+      - profit_pct: 10.0
+        exit_ratio: 0.35  # 10%에서 35% 익절
+      - profit_pct: 15.0
+        exit_ratio: 0.40  # 15%에서 40% 익절
+    
+    # 피라미딩 설정
+    pyramiding_enabled: true
+    pyramiding_levels:
+      - profit_pct: 3.0
+        size_ratio: 0.75  # 원 포지션의 75%
+      - profit_pct: 6.0
+        size_ratio: 0.50  # 원 포지션의 50%
+      - profit_pct: 9.0
+        size_ratio: 0.25  # 원 포지션의 25%
+    
+    # 거래할 심볼 (초기에는 BTC만)
+    symbols:
+      - BTCUSDT
+      # - ETHUSDT  # 나중에 추가
+      # - XRPUSDT  # 심볼별 ADX 조정 필요
+    
+    # 최소 신호 간격
+    min_signal_interval: 4  # 4시간
+    
+    # 동적 포지션 사이징
+    dynamic_position_sizing:
+      enabled: true
+      min_position_size: 10  # 최소 10%
+      max_position_size: 30  # 최대 30%
+      use_market_regime: true
+      use_mdd_adjustment: true
+      use_risk_parity: false
+
+  # ZL MACD + Ichimoku 전략 (비트코인 1시간봉 특화) - turtle_trading_strategy.py와 완전 동일
+  zlmacd_ichimoku:
+    enabled: false  # 초기에는 비활성화, 테스트 후 활성화
+    leverage: 8     # 백테스트 검증: 8x (TFPE의 10x보다 보수적)
+    position_size: 24  # 기본 포지션 크기 24% (Kelly로 동적 조정됨, 실제는 5-20%)
+    
+    # 리스크 관리 독립성 설정
+    pause_on_high_risk: false  # HIGH 리스크에서도 계속 거래 (더 공격적)
+    
+    # ZL MACD 파라미터 (turtle_trading_strategy.py와 동일)
+    zlmacd_fast: 12
+    zlmacd_slow: 26
+    zlmacd_signal: 9
+    
+    # Ichimoku Cloud 파라미터 (turtle_trading_strategy.py와 동일)
+    tenkan_period: 9
+    kijun_period: 26
+    senkou_b_period: 52
+    chikou_shift: 26
+    cloud_shift: 26
+    
+    # 진입 조건 (turtle_trading_strategy.py 참조)
+    min_signal_strength: 3  # 최소 3개 신호 필요
+    cloud_distance_threshold: 0.005  # 0.5%
+    # 진입 신호 강도 계산 (0.5점은 부가 신호)
+    signal_scoring:
+      zlmacd_cross: 1.0  # MACD 크로스
+      cloud_position: 1.0  # 구름 위치
+      tenkan_kijun: 1.0  # 전환선/기준선
+      cloud_color: 0.5  # 구름 색상
+    
+    # ADX 필터
+    adx_period: 14
+    adx_threshold: 25  # ADX > 25 필요
+    
+    # 손절/익절 (ATR 기반) - turtle_trading_strategy.py와 완전 동일
+    stop_loss_atr: 1.5    # ATR x 1.5 (동적 손절)
+    take_profit_atr: 5.0  # ATR x 5.0 (손익비 개선)
+    initial_stop_loss: 0.02  # 초기 타이트한 손절 2%
+    max_stop_loss_pct: 0.02  # 최대 2% 손절
+    max_position_loss_pct: 0.08  # 포지션당 최대 손실 8%
+    # 동적 손절 계산 (turtle_trading_strategy.py 참조)
+    dynamic_stop_loss_formula: "min(0.02, 1.5 * atr / entry_price)"
+    
+    # 트레일링 스톱 - 백테스트 파라미터
+    trailing_stop_activation: 0.03  # 3% 수익 시 활성화
+    trailing_stop_distance: 0.10    # 최고점에서 10% 하락
+    
+    # 부분 익절 (3단계) - turtle_trading_strategy.py와 완전 동일
+    partial_exit_levels:
+      - profit_pct: 5.0
+        exit_ratio: 0.25  # 5%에서 25% 익절
+      - profit_pct: 10.0
+        exit_ratio: 0.35  # 10%에서 35% 익절
+      - profit_pct: 15.0
+        exit_ratio: 0.40  # 15%에서 40% 익절
+    partial_exit_1_pct: 5.0   # 첫 번째 부분 익절 수익률
+    partial_exit_2_pct: 10.0  # 두 번째 부분 익절 수익률
+    partial_exit_3_pct: 15.0  # 세 번째 부분 익절 수익률
+    partial_exit_1_ratio: 0.25  # 첫 번째 익절 비율
+    partial_exit_2_ratio: 0.35  # 두 번째 익절 비율
+    partial_exit_3_ratio: 0.40  # 세 번째 익절 비율
+    
+    # 피라미딩 설정 - turtle_trading_strategy.py와 완전 동일
+    pyramiding_enabled: true
+    max_pyramiding_levels: 3  # 최대 3단계
+    pyramiding_levels:
+      - profit_pct: 3.0
+        size_ratio: 0.75  # 원 포지션의 75%
+      - profit_pct: 6.0
+        size_ratio: 0.50  # 원 포지션의 50%
+      - profit_pct: 9.0
+        size_ratio: 0.25  # 원 포지션의 25%
+    # 피라미딩 단계별 크기 (백업)
+    pyramid_level_0_size: 0.75  # 첫 번째 피라미딩
+    pyramid_level_1_size: 0.50  # 두 번째 피라미딩
+    pyramid_level_2_size: 0.25  # 세 번째 피라미딩
+    
+    # 리스크 관리 - turtle_trading_strategy.py와 완전 동일
+    daily_loss_limit_pct: 3.0  # 일일 손실 한도 3%
+    consecutive_loss_adjustment: true  # 연속 손실 시 포지션 축소
+    trading_suspension_hours: 24  # 일일 손실 한도 도달시 24시간 중단
+    # 거래 재개 조건 (turtle_trading_strategy.py 참조)
+    resume_on_midnight: true  # 자정에 거래 재개 가능
+    resume_after_24h: true    # 24시간 후 거래 재개
+    
+    # ATR 계산
+    atr_period: 14  # ATR 계산 기간
+    
+    # Kelly Criterion 설정
+    use_kelly: true
+    kelly_lookback: 100  # 최근 100개 거래 분석
+    kelly_min_trades: 20  # 최소 20개 거래 필요
+    kelly_default_size: 0.10  # Kelly 기본값 10%
+    
+    # 거래 비용 - turtle_trading_strategy.py와 동일
+    commission: 0.0006  # 0.06% (메이커)
+    slippage: 0.001     # 0.1% (BTC 기본값)
+    # 심볼별 슬리피지 조정 (turtle_trading_strategy.py 참조)
+    slippage_xrp: 0.002  # XRP는 0.2%
+    
+    # 거래할 심볼 (비트코인 1시간봉 전용)
+    symbols:
+      - BTCUSDT
+    
+    # 타임프레임 고정
+    timeframe: "1h"  # 1시간봉 고정 (4h, 15m도 가능하지만 파라미터 최적화 필요)
+    
+    # 최소 신호 간격
+    min_signal_interval: 4  # 4시간
+    
+    # Kelly Criterion 설정 - turtle_trading_strategy.py와 동일
+    use_kelly: true
+    kelly_lookback: 100  # 최근 100개 거래 분석
+    kelly_min_trades: 20  # 최소 20개 거래 필요
+    kelly_default_size: 0.10  # Kelly 기본값 10%
+    kelly_fraction_min: 0.05  # 최소 5%
+    kelly_fraction_max: 0.20  # 최대 20% (기존 30%에서 하향)
+    half_kelly: true  # Half Kelly 사용 (50% Kelly)
+    
+    # 연속 손실 조정 (turtle_trading_strategy.py 참조)
+    consecutive_loss_levels:
+      - losses: 3
+        multiplier: 0.7  # 3회 연속 손실: 70%로 축소
+      - losses: 5
+        multiplier: 0.5  # 5회 연속 손실: 50%로 축소
+      - losses: 7
+        multiplier: 0.3  # 7회 연속 손실: 30%로 축소
+    
+    # 심볼별 ADX 임계값 조정 (turtle_trading_strategy.py 참조)
+    adx_threshold_xrp: 20  # XRP는 ADX 20
+    adx_threshold_eth: 23  # ETH는 ADX 23
+    adx_threshold_btc: 25  # BTC는 기본 ADX 25
+    
+    # 필터 설정
+    filter_enabled: true  # should_take_trade() 메서드
+    filter_description: "모든 신호에서 거래 (필터 없음)"
+    
+    # 동적 포지션 사이징
+    dynamic_position_sizing:
+      enabled: true
+      min_position_size: 5   # 최소 5% 
+      max_position_size: 20  # 최대 20%
+      use_market_regime: true
+      use_mdd_adjustment: true
+      use_risk_parity: false
+    
+    # 추가 리스크 관리 파라미터 (turtle_trading_strategy.py 참조)
+    last_trade_result: null  # 직전 거래 결과 추적
+    consecutive_losses: 0    # 연속 손실 횟수
+    recent_trades_limit: 100 # 최근 거래 기록 최대 개수
+    accumulated_reduction: 0 # 누적 축소 비율
+    
+    # 수익 보호 설정 (turtle_trading_strategy.py 참조)
+    profit_protection_at_1pct: 1.01  # 1% 이익 보호 (트레일링 스톱 활성화시)
+    
+    # 출력 메시지 형식 (turtle_trading_strategy.py 참조)
+    log_details: true  # 상세 로그 출력
+
+# 데이터베이스 설정
+database:
+  path: "data/trading.db"
+  backup_interval: 86400  # 24시간
+
+# 안전 설정
+safety:
+  pre_start_check: true
+  max_open_positions_value: 50000  # USD
+  emergency_stop_loss: 10  # 10% 손실시 긴급 정지
+
+# 수동/자동 거래 통합 설정
+hybrid_trading:
+  enabled: true
+  
+  # 수동 거래 기본값
+  manual_defaults:
+    leverage: 10          # 기본 레버리지 (백테스트 개선: 15 → 10)
+    position_size: 24     # 기본 포지션 크기 (%)
+    
+  # 충돌 방지 설정
+  conflict_prevention:
+    block_auto_on_manual: true  # 수동 포지션이 있을 때 자동 거래 차단
+    separate_notifications: true # 수동/자동 알림 분리
+    
+  # 수동 거래 추적
+  tracking:
+    record_manual_trades: true  # 수동 거래 기록 저장
+    track_pnl: true            # 손익 추적
+  
+# 스마트 재개 설정
+smart_resume:
+  enabled: true
+  pause_duration: 3600  # 1시간
+  size_change_threshold: 0.1  # 10% 크기 변경
+
+# 포지션 동기화 설정
+position_sync:
+  auto_sync_interval: 60  # 60초마다 동기화 (300 → 60)
+  force_sync_on_error: true  # 에러 발생시 강제 동기화
+
+# MDD 보호 설정 (개선된 다단계 관리)
+mdd_protection:
+  enabled: true  # MDD 관리 기능 활성화
+  max_allowed_mdd: 40.0  # 최대 허용 MDD (%)
+  mdd_recovery_threshold: 15.0  # MDD 회복 임계값 (%)
+  
+  # MDD 단계별 포지션 크기 조정 (백테스트와 동일)
+  mdd_level_1: 30.0  # MDD 30%: 포지션 70%로 축소
+  mdd_level_1_size: 0.7
+  mdd_level_2: 35.0  # MDD 35%: 포지션 50%로 축소
+  mdd_level_2_size: 0.5
+  mdd_level_3: 40.0  # MDD 40%: 포지션 30%로 축소
+  mdd_level_3_size: 0.3
+  mdd_level_4: 50.0  # MDD 50%: 포지션 10%로 축소 (긴급)
+  mdd_level_4_size: 0.1
+  
+  # 회복 메커니즘
+  mdd_recovery_mode: true  # 회복 모드 활성화
+  recovery_win_threshold: 3  # 연속 3승 시 포지션 크기 증가
+  recovery_size_increment: 0.1  # 회복 시 10%씩 증가
+  max_recovery_size: 1.0  # 최대 100%까지 회복
+  
+  # 안전장치
+  mdd_emergency_stop: 60.0  # MDD 60% 도달시 완전 중단
+  force_trade_if_no_position: true  # 포지션이 없으면 최소 거래 허용
+  
+  # 계좌 이체 감지 설정
+  detect_transfers: true  # 자동 이체 감지 활성화
+  transfer_threshold_pct: 20.0  # 이체 감지 임계값 (20% 이상 급감)
+  transfer_time_window: 300  # 감지 시간 윈도우 (5분)
+  
+  # 기존 설정 (호환성 유지)
+  mdd_position_reduction: 0.5  # MDD 도달시 포지션 크기 축소 비율 (50%)
+  mdd_stop_new_trades: false  # MDD 도달시에도 축소된 크기로 거래 계속
+  mdd_force_close_threshold: 50.0  # 강제 청산 임계값 (%)
+
+# Phase 2 설정 (Event-Driven Architecture)
+phase2:
+  enabled: true  # Phase 2 활성화
+  
+  # Event Bus 설정
+  event_bus:
+    max_queue_size: 1000  # 전체 큐 크기
+    num_workers: 3        # 워커 스레드 수
+    
+  # Position State Machine 설정
+  state_machine:
+    cleanup_interval: 3600  # 종료된 상태 정리 간격 (1시간)
+    history_retention: 72   # 히스토리 보관 시간 (72시간)
+    
+  # Reconciliation Engine 설정
+  reconciliation:
+    intervals:
+      periodic: 300      # 주기적 검증 (5분)
+      triggered: 60      # 트리거된 검증 (1분)
+      emergency: 10      # 긴급 검증 (10초)
+    max_attempts: 3      # 최대 재시도 횟수
+    backoff_multiplier: 2.0  # 백오프 배수

@@ -1,0 +1,59 @@
+# docker-compose.yml
+services:
+  # Trading bot service
+  trading-bot:
+    build: .
+    container_name: binance-trading-bot
+    restart: unless-stopped
+    environment:
+      - PYTHONPATH=/app
+    env_file:
+      - .env
+    volumes:
+      - ./logs:/app/logs
+      - ./state:/app/state
+      - ./config:/app/config
+    networks:
+      - trading-network
+    command: python src/main.py
+
+  # Redis service (optional - for caching)
+  redis:
+    image: redis:7-alpine
+    container_name: trading-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - trading-network
+    command: redis-server --appendonly yes
+    profiles:
+      - full  # Only start with --profile full
+
+  # PostgreSQL service (optional - for future use)
+  postgres:
+    image: postgres:15-alpine
+    container_name: trading-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: trading_bot
+      POSTGRES_USER: trading_user
+      POSTGRES_PASSWORD: trading_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - trading-network
+    profiles:
+      - full  # Only start with --profile full
+
+networks:
+  trading-network:
+    driver: bridge
+
+volumes:
+  redis_data:
+  postgres_data:

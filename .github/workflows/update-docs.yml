@@ -1,0 +1,68 @@
+name: Update Documentation
+
+on:
+  # 일일 실행 (UTC 01:00 = KST 10:00)
+  schedule:
+    - cron: '0 1 * * *'
+  
+  # 수동 실행 가능
+  workflow_dispatch:
+  
+  # main 브랜치에 푸시될 때
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'config/**'
+      - 'scripts/**'
+
+jobs:
+  update-docs:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyyaml
+    
+    - name: Update CLAUDE.md
+      run: |
+        python scripts/update_claude_docs.py
+    
+    - name: Check for changes
+      id: check_changes
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git add CLAUDE.md
+        if git diff --staged --quiet; then
+          echo "No changes to commit"
+          echo "changes=false" >> $GITHUB_OUTPUT
+        else
+          echo "Changes detected"
+          echo "changes=true" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Commit and push changes
+      if: steps.check_changes.outputs.changes == 'true'
+      run: |
+        git commit -m "docs: 자동 업데이트 CLAUDE.md [skip ci]"
+        git push
+    
+    - name: Generate performance report
+      if: github.event_name == 'schedule'
+      run: |
+        echo "📊 일일 성능 리포트 생성 (추후 구현)"
+        # python scripts/generate_performance_report.py --type daily

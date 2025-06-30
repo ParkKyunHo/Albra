@@ -1,0 +1,64 @@
+# requirements.txt
+# AlbraTrading System Dependencies
+
+# Core
+python-binance==1.0.19
+pandas==2.0.3
+pandas-ta==0.3.14b0
+numpy==1.24.3
+asyncio==3.4.3
+setuptools<81  # pkg_resources 경고 해결
+
+# WebSocket (실시간 모니터링)
+websockets==11.0.3
+
+# Web Dashboard
+flask==2.3.2
+flask-cors==4.0.0
+
+# Database
+sqlalchemy==2.0.19
+aiosqlite==0.19.0  # 비동기 SQLite (추가)
+
+# Notifications
+python-telegram-bot==22.1
+
+# Configuration
+python-dotenv==1.0.0
+pyyaml==6.0
+
+# Logging
+coloredlogs==15.0.1
+
+# Data Processing
+ta==0.10.2  # 추가 기술적 지표 라이브러리 (추가)
+matplotlib==3.7.2  # 차트 생성 (백테스팅용) (추가)
+seaborn==0.12.2  # 차트 스타일링 (추가)
+
+# Async Support
+aiohttp==3.8.5  # 비동기 HTTP 요청 (추가)
+aiodns==3.0.0  # 비동기 DNS 해석 (추가)
+aiofiles==23.2.1  # 비동기 파일 I/O (추가)
+
+# Utilities
+python-dateutil==2.8.2  # 날짜/시간 처리 (추가)
+pytz==2023.3  # 시간대 처리 (추가)
+
+# Testing (optional)
+pytest==7.4.0
+pytest-asyncio==0.21.0
+
+# Monitoring (optional)
+psutil==5.9.5
+
+# Development (optional)
+ipython==8.14.0  # 대화형 디버깅 (추가)
+black==23.7.0  # 코드 포맷터 (추가)
+pylint==2.17.5  # 코드 검사 (추가)
+
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
+ccxt==4.4.90
+cryptography==45.0.4
+tabulate==0.9.0
