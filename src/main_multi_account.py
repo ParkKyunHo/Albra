@@ -716,20 +716,30 @@ class MultiAccountTradingSystem:
             
             # 5. 웹 대시보드
             if self.dashboard:
-                # Flask는 블로킹 호출이므로 별도 스레드에서 실행
-                from threading import Thread
-                dashboard_thread = Thread(
-                    target=lambda: self.dashboard.app.run(
-                        host='0.0.0.0', 
-                        port=5000, 
-                        debug=False,
-                        use_reloader=False
-                    ),
-                    daemon=True,
-                    name="dashboard"
-                )
-                dashboard_thread.start()
-                logger.info("웹 대시보드 시작 (포트: 5000)")
+                # 포트 사용 체크
+                import socket
+                def is_port_in_use(port):
+                    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                        return s.connect_ex(('localhost', port)) == 0
+                
+                dashboard_port = 5000
+                if is_port_in_use(dashboard_port):
+                    logger.warning(f"포트 {dashboard_port}이 이미 사용 중입니다. 대시보드를 시작하지 않습니다.")
+                else:
+                    # Flask는 블로킹 호출이므로 별도 스레드에서 실행
+                    from threading import Thread
+                    dashboard_thread = Thread(
+                        target=lambda: self.dashboard.app.run(
+                            host='0.0.0.0', 
+                            port=dashboard_port, 
+                            debug=False,
+                            use_reloader=False
+                        ),
+                        daemon=True,
+                        name="dashboard"
+                    )
+                    dashboard_thread.start()
+                    logger.info(f"웹 대시보드 시작 (포트: {dashboard_port})")
             
             # 6. 정기 상태 리포트
             task = asyncio.create_task(
@@ -754,9 +764,6 @@ class MultiAccountTradingSystem:
         """포지션 모니터링 루프"""
         while self.running:
             try:
-                # Position Monitor의 check_positions 실행
-                if self.position_monitor:
-                    await self.position_monitor.check_positions()
                 
                 # Position Sync Monitor 실행
                 if self.position_sync_monitor:
@@ -824,8 +831,17 @@ class MultiAccountTradingSystem:
                 if self.dry_run:
                     logger.debug(f"[DRY RUN] {name} 전략 실행 (실제 거래 없음)")
                 
-                # 전략 실행
-                await strategy.check_conditions()
+                # 전략 실행 - main.py와 동일한 방식
+                if hasattr(strategy, 'run_cycle'):
+                    await strategy.run_cycle()
+                elif hasattr(strategy, 'analyze'):
+                    # 구버전 호환성
+                    market_data = {}
+                    signals = await strategy.analyze(market_data)
+                    if signals and self.position_manager:
+                        await self.position_manager.process_signals(signals)
+                else:
+                    logger.warning(f"{name} 전략에 실행 가능한 메서드가 없습니다")
                 
                 # 전략별 체크 간격
                 check_interval = strategy.config.get('check_interval', 60)
