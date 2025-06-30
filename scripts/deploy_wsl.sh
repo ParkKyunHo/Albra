@@ -79,7 +79,7 @@ ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no -i "$SSH_KEY" ubuntu@$EC2_IP
 
 # 백업
 echo -e "${BLUE}[5/12] Backing up current deployment on EC2...${NC}"
-ssh -i "$SSH_KEY" ubuntu@$EC2_IP "if [ -d $REMOTE_DIR ]; then cp -r $REMOTE_DIR/state $REMOTE_DIR/state.backup.\$(date +%Y%m%d_%H%M%S) 2>/dev/null || true; fi"
+ssh -i "$SSH_KEY" ubuntu@$EC2_IP "if [ -d $REMOTE_DIR ]; then sudo cp -r $REMOTE_DIR/state $REMOTE_DIR/state.backup.\$(date +%Y%m%d_%H%M%S) 2>/dev/null || true; fi"
 
 # 서비스 중지
 echo -e "${BLUE}[6/12] Stopping existing services...${NC}"
@@ -127,7 +127,9 @@ scp -i "$SSH_KEY" .env ubuntu@$EC2_IP:$REMOTE_DIR/
 echo -e "${BLUE}[9/12] Setting permissions...${NC}"
 ssh -i "$SSH_KEY" ubuntu@$EC2_IP "chmod +x $REMOTE_DIR/scripts/*.sh $REMOTE_DIR/scripts/*.py 2>/dev/null || true"
 ssh -i "$SSH_KEY" ubuntu@$EC2_IP "chmod -R 755 $REMOTE_DIR/src/"
-ssh -i "$SSH_KEY" ubuntu@$EC2_IP "chown -R ubuntu:ubuntu $REMOTE_DIR/"
+ssh -i "$SSH_KEY" ubuntu@$EC2_IP "sudo chown -R ubuntu:ubuntu $REMOTE_DIR/"
+# 로그 디렉토리 권한 명시적 설정
+ssh -i "$SSH_KEY" ubuntu@$EC2_IP "sudo chown -R ubuntu:ubuntu $REMOTE_DIR/logs/ 2>/dev/null || true"
 
 # Python 환경 설정
 echo -e "${BLUE}[10/12] Setting up Python environment...${NC}"

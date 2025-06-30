@@ -127,7 +127,7 @@ setup_directories() {
     touch /home/ubuntu/AlbraTrading/logs/systemd_multi.log
     touch /home/ubuntu/AlbraTrading/logs/systemd_multi_error.log
     
-    chown -R ubuntu:ubuntu /home/ubuntu/AlbraTrading/logs
+    sudo chown -R ubuntu:ubuntu /home/ubuntu/AlbraTrading/logs
 }
 
 # 단일 모드 설정
