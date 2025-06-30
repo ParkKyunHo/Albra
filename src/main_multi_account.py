@@ -681,7 +681,7 @@ class MultiAccountTradingSystem:
             main_tasks = []
             
             # 1. 포지션 모니터링
-            if self.position_monitor:
+            if hasattr(self, 'position_sync_monitor') and self.position_sync_monitor:
                 task = asyncio.create_task(
                     self._monitor_positions(),
                     name="position_monitor"
@@ -997,8 +997,9 @@ class MultiAccountTradingSystem:
             logger.info("5. 리소스 정리")
             
             # 웹 대시보드 종료
-            if self.dashboard:
-                await self.dashboard.stop()
+            if self.dashboard and hasattr(self.dashboard, 'executor'):
+                self.dashboard.executor.shutdown(wait=False)
+                logger.info("Dashboard executor 종료")
             
             # API 연결 종료
             if self.binance_api:
