@@ -418,7 +418,6 @@ class MultiAccountTradingSystem:
                 config=self.config_manager.config.get('mdd_protection', {}),
                 notification_manager=self.notification_manager
             )
-            await self.mdd_manager.initialize()
             logger.info("✓ MDD Manager 초기화 완료")
             
         except Exception as e:
