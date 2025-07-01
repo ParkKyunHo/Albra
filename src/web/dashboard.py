@@ -351,9 +351,13 @@ class DashboardApp:
                         info = strategy.get_strategy_info()
                         strategy_info['name'] = info.get('name', 'Unknown')
                     except:
-                        strategy_info['name'] = getattr(strategy, 'name', 'Unknown')
+                        # strategy_name 속성 시도
+                        strategy_info['name'] = getattr(strategy, 'strategy_name', 
+                                                      getattr(strategy, 'name', 'Unknown'))
                 else:
-                    strategy_info['name'] = getattr(strategy, 'name', 'Unknown')
+                    # strategy_name 속성을 우선적으로 확인
+                    strategy_info['name'] = getattr(strategy, 'strategy_name', 
+                                                  getattr(strategy, 'name', 'Unknown'))
                 
                 strategies_list.append(strategy_info)
             
@@ -436,54 +440,147 @@ class DashboardApp:
         }
     
     def _build_account_data(self) -> Dict[str, Any]:
-        """계좌 데이터 빌드"""
-        account_data = {
-            'balance': 0,
-            'unrealized_pnl': 0,
-            'margin_balance': 0,
-            'available_balance': 0,
-            'timestamp': datetime.now().isoformat()
-        }
+        """계좌 데이터 빌드 (멀티 계좌 호환)"""
+        # 멀티 계좌 확인
+        is_multi_account = (hasattr(self.binance_api, 'is_multi_account') and 
+                           self.binance_api.is_multi_account and 
+                           hasattr(self.binance_api, 'account_apis'))
         
-        if self.binance_api:  # exchange 대신 binance_api 사용
+        if is_multi_account:
+            # 멀티 계좌 모드
+            accounts_data = {}
+            total_balance = 0
+            total_unrealized_pnl = 0
+            
             try:
-                # get_account_balance 메서드 호출
-                balance = self._run_async(self.binance_api.get_account_balance())
-                if balance is not None:
-                    account_data['balance'] = float(balance)
-                    account_data['available_balance'] = float(balance)  # 임시로 동일하게 설정
+                # 각 계좌별 정보 수집
+                for account_id, api in self.binance_api.account_apis.items():
+                    try:
+                        balance = self._run_async(api.get_account_balance())
+                        if balance is None:
+                            balance = 0
+                        else:
+                            balance = float(balance)
+                        
+                        # 해당 계좌의 포지션에서 미실현 손익 계산
+                        account_pnl = 0
+                        if self.position_manager and hasattr(self.position_manager, 'get_active_positions'):
+                            # account_id 파라미터가 지원되는지 확인
+                            try:
+                                positions = self.position_manager.get_active_positions(account_id=account_id)
+                            except TypeError:
+                                # account_id 파라미터가 없으면 전체 포지션 가져오기
+                                positions = self.position_manager.get_active_positions()
+                                # account_id로 필터링
+                                positions = [p for p in positions if getattr(p, 'account_id', None) == account_id]
+                            
+                            for pos in positions:
+                                current_price = self._get_current_price(pos.symbol)
+                                if current_price and pos.entry_price:
+                                    if pos.side == 'LONG':
+                                        pnl = (current_price - pos.entry_price) * pos.size
+                                    else:
+                                        pnl = (pos.entry_price - current_price) * pos.size
+                                    account_pnl += pnl
+                        
+                        accounts_data[account_id] = {
+                            'balance': round(balance, 2),
+                            'unrealized_pnl': round(account_pnl, 2),
+                            'margin_balance': round(balance + account_pnl, 2),
+                            'available_balance': round(balance, 2)
+                        }
+                        
+                        total_balance += balance
+                        total_unrealized_pnl += account_pnl
+                        
+                    except Exception as e:
+                        logger.error(f"계좌 {account_id} 정보 조회 실패: {e}")
+                        accounts_data[account_id] = {
+                            'balance': 0,
+                            'unrealized_pnl': 0,
+                            'margin_balance': 0,
+                            'available_balance': 0,
+                            'error': str(e)
+                        }
                 
-                # 포지션에서 미실현 손익 계산
-                if self.position_manager:
-                    positions = self.position_manager.get_active_positions()
-                    total_pnl = 0
-                    for pos in positions:
-                        current_price = self._get_current_price(pos.symbol)
-                        if current_price and pos.entry_price:
-                            if pos.side == 'LONG':
-                                pnl = (current_price - pos.entry_price) * pos.size
-                            else:
-                                pnl = (pos.entry_price - current_price) * pos.size
-                            total_pnl += pnl
-                    
-                    account_data['unrealized_pnl'] = round(total_pnl, 2)
-                    account_data['margin_balance'] = account_data['balance'] + account_data['unrealized_pnl']
-                    
+                return {
+                    'is_multi_account': True,
+                    'accounts': accounts_data,
+                    'balance': round(total_balance, 2),  # 전체 잔고 (호환성)
+                    'unrealized_pnl': round(total_unrealized_pnl, 2),
+                    'margin_balance': round(total_balance + total_unrealized_pnl, 2),
+                    'available_balance': round(total_balance, 2),
+                    'timestamp': datetime.now().isoformat()
+                }
+                
             except Exception as e:
-                logger.error(f"계좌 정보 조회 실패: {e}")
-        
-        return account_data
+                logger.error(f"멀티 계좌 정보 조회 실패: {e}")
+                # 에러 시 기본값 반환
+                return {
+                    'is_multi_account': True,
+                    'accounts': {},
+                    'balance': 0,
+                    'unrealized_pnl': 0,
+                    'margin_balance': 0,
+                    'available_balance': 0,
+                    'timestamp': datetime.now().isoformat(),
+                    'error': str(e)
+                }
+        else:
+            # 단일 계좌 모드 (기존 코드)
+            account_data = {
+                'is_multi_account': False,
+                'balance': 0,
+                'unrealized_pnl': 0,
+                'margin_balance': 0,
+                'available_balance': 0,
+                'timestamp': datetime.now().isoformat()
+            }
+            
+            if self.binance_api:
+                try:
+                    # get_account_balance 메서드 호출
+                    balance = self._run_async(self.binance_api.get_account_balance())
+                    if balance is not None:
+                        account_data['balance'] = float(balance)
+                        account_data['available_balance'] = float(balance)
+                    
+                    # 포지션에서 미실현 손익 계산
+                    if self.position_manager:
+                        positions = self.position_manager.get_active_positions()
+                        total_pnl = 0
+                        for pos in positions:
+                            current_price = self._get_current_price(pos.symbol)
+                            if current_price and pos.entry_price:
+                                if pos.side == 'LONG':
+                                    pnl = (current_price - pos.entry_price) * pos.size
+                                else:
+                                    pnl = (pos.entry_price - current_price) * pos.size
+                                total_pnl += pnl
+                        
+                        account_data['unrealized_pnl'] = round(total_pnl, 2)
+                        account_data['margin_balance'] = account_data['balance'] + account_data['unrealized_pnl']
+                        
+                except Exception as e:
+                    logger.error(f"계좌 정보 조회 실패: {e}")
+            
+            return account_data
     
     def _build_strategies_data(self) -> Dict[str, Any]:
         """전략 데이터 빌드"""
         strategies_list = []
         
         for strategy in self.strategies:
+            # 전략 이름 가져오기 (strategy_name 우선)
+            strategy_name = getattr(strategy, 'strategy_name', 
+                                  getattr(strategy, 'name', strategy.__class__.__name__))
+            
             strategy_data = {
-                'name': getattr(strategy, 'name', 'Unknown'),
+                'name': strategy_name,
                 'class': strategy.__class__.__name__,
                 'symbols': getattr(strategy, 'symbols', []),
-                'parameters': {}
+                'parameters': {},
+                'status': 'active'  # 기본값
             }
             
             # 주요 파라미터 추출

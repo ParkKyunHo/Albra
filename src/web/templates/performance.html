@@ -46,6 +46,23 @@
             color: #f0b90b;
         }
         
+        .home-link {
+            background-color: #f0b90b;
+            color: #0b0e11;
+            padding: 8px 16px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .home-link:hover {
+            background-color: #d4a00a;
+        }
+        
         .nav-tabs {
             display: flex;
             gap: 20px;
@@ -301,7 +318,10 @@
     <header>
         <div class="header-content">
             <h1>📊 AlbraTrading 성과 분석</h1>
-            <button class="refresh-btn" onclick="refreshData()">새로고침</button>
+            <div style="display: flex; gap: 10px;">
+                <a href="/" class="home-link">🏠 메인 대시보드</a>
+                <button class="refresh-btn" onclick="refreshData()">새로고침</button>
+            </div>
         </div>
     </header>
     

@@ -44,6 +44,10 @@
   - src/: compatibility.py, main_multi_account.py
   - .claude/: SESSION_LOG.md
 
+- 2025-07-02 03:07:13 KST: [a54f79a] fix: 웹 대시보드 초기화 및 표시 문제 해결
+  - src/: main_multi_account.py, dashboard.py
+  - .claude/: SESSION_LOG.md
+
 ### 다음 작업
 - [ ] 계속 진행
 

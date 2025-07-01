@@ -404,7 +404,7 @@
                 <h2>💰 계좌 정보 <span class="real-time-indicator">LIVE</span></h2>
                 <div class="stat-row">
                     <span class="stat-label">총 잔고</span>
-                    <span class="stat-value" id="balance">-</span>
+                    <span class="stat-value" id="balance">로딩중...</span>
                 </div>
                 <div class="stat-row">
                     <span class="stat-label">미실현 손익</span>
@@ -686,22 +686,73 @@
                 const response = await fetch('/api/account');
                 const data = await response.json();
                 
-                // 안전한 값 처리
-                const balance = data.balance || 0;
-                const unrealizedPnl = data.unrealized_pnl || data.total_unrealized_pnl || 0;
-                const marginBalance = data.margin_balance || data.total_margin_balance || balance;
-                const availableBalance = data.available_balance || balance;
-                
-                document.getElementById('balance').textContent = `$${formatNumber(balance)}`;
-                
-                const pnlElement = document.getElementById('unrealized-pnl');
-                pnlElement.textContent = `$${formatNumber(unrealizedPnl)}`;
-                pnlElement.className = `stat-value ${unrealizedPnl >= 0 ? 'profit' : 'loss'}`;
-                
-                document.getElementById('margin-balance').textContent = `$${formatNumber(marginBalance)}`;
-                document.getElementById('available-balance').textContent = `$${formatNumber(availableBalance)}`;
-                
-                document.getElementById('accountUpdate').textContent = `마지막 업데이트: ${formatTime(data.timestamp)}`;
+                if (data.is_multi_account && data.accounts) {
+                    // 멀티 계좌 모드
+                    let accountsHtml = '';
+                    
+                    // 각 계좌별 정보 표시
+                    for (const [accountId, accountData] of Object.entries(data.accounts)) {
+                        const pnlClass = accountData.unrealized_pnl >= 0 ? 'profit' : 'loss';
+                        accountsHtml += `
+                            <div style="margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #2d3748;">
+                                <h3 style="color: #f0b90b; margin-bottom: 10px;">${accountId === 'master' ? '마스터 계좌' : accountId.toUpperCase() + ' 계좌'}</h3>
+                                <div class="stat-row">
+                                    <span class="stat-label">잔고</span>
+                                    <span class="stat-value">${formatNumber(accountData.balance)}</span>
+                                </div>
+                                <div class="stat-row">
+                                    <span class="stat-label">미실현 손익</span>
+                                    <span class="stat-value ${pnlClass}">${formatNumber(accountData.unrealized_pnl)}</span>
+                                </div>
+                                <div class="stat-row">
+                                    <span class="stat-label">마진 잔고</span>
+                                    <span class="stat-value">${formatNumber(accountData.margin_balance)}</span>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    // 전체 합계 표시
+                    const totalPnlClass = data.unrealized_pnl >= 0 ? 'profit' : 'loss';
+                    accountsHtml += `
+                        <div style="background-color: #252930; padding: 15px; border-radius: 6px; margin-top: 20px;">
+                            <h3 style="color: #f0b90b; margin-bottom: 10px;">전체 합계</h3>
+                            <div class="stat-row">
+                                <span class="stat-label">총 잔고</span>
+                                <span class="stat-value" style="font-size: 24px;">${formatNumber(data.balance)}</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">총 미실현 손익</span>
+                                <span class="stat-value ${totalPnlClass}" style="font-size: 20px;">${formatNumber(data.unrealized_pnl)}</span>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // 계좌 카드 전체 내용 교체
+                    document.getElementById('accountCard').innerHTML = `
+                        <h2>💰 계좌 정보 <span class="real-time-indicator">LIVE</span></h2>
+                        ${accountsHtml}
+                        <div class="last-update" id="accountUpdate">마지막 업데이트: ${formatTime(data.timestamp)}</div>
+                    `;
+                    
+                } else {
+                    // 단일 계좌 모드 (기존 코드)
+                    const balance = data.balance || 0;
+                    const unrealizedPnl = data.unrealized_pnl || 0;
+                    const marginBalance = data.margin_balance || balance;
+                    const availableBalance = data.available_balance || balance;
+                    
+                    document.getElementById('balance').textContent = `${formatNumber(balance)}`;
+                    
+                    const pnlElement = document.getElementById('unrealized-pnl');
+                    pnlElement.textContent = `${formatNumber(unrealizedPnl)}`;
+                    pnlElement.className = `stat-value ${unrealizedPnl >= 0 ? 'profit' : 'loss'}`;
+                    
+                    document.getElementById('margin-balance').textContent = `${formatNumber(marginBalance)}`;
+                    document.getElementById('available-balance').textContent = `${formatNumber(availableBalance)}`;
+                    
+                    document.getElementById('accountUpdate').textContent = `마지막 업데이트: ${formatTime(data.timestamp)}`;
+                }
                 
             } catch (error) {
                 showError('계좌 정보를 가져올 수 없습니다.');
