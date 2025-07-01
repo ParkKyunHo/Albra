@@ -25,9 +25,7 @@ AlbraTrading은 AWS EC2에서 24/7 운영되는 개인용 바이낸스 자동 �
 - **실시간 모니터링**: 텔레그램 봇 + 웹 대시보드
 
 ### 현재 운영 상태
-- **서버**: AWS EC2 (Ubuntu 22.04 LTS) - **새 인스턴스**
-- **EC2 IP**: 54.88.60.48 (2025-07-01 변경)
-- **SSH Key**: trading-bot2
+- **서버**: AWS EC2 (Ubuntu 22.04 LTS)
 - **Python**: 3.12 (venv 가상환경)
 - **운영 모드**: 멀티 계좌 모드 (Master + Sub1)
 - **활성 전략**: 
@@ -55,8 +53,8 @@ Windows (deploy.bat) → WSL (deploy_wsl.sh) → EC2
 # WSL에 SSH 키 설정
 mkdir -p ~/.ssh
 chmod 700 ~/.ssh
-cp /mnt/c/Users/박균호/.ssh/trading-bot-key ~/.ssh/
-chmod 600 ~/.ssh/trading-bot-key
+cp /mnt/c/Users/박균호/.ssh/trading-bot4 ~/.ssh/
+chmod 600 ~/.ssh/trading-bot4
 ```
 
 #### 사용 방법
@@ -73,7 +71,7 @@ C:\> deploy_v2.bat
 | Windows 접근 | `\\wsl.localhost\Ubuntu\home\albra\AlbraTrading` | - |
 
 ### 주의사항
-- SSH 키는 WSL 내부 `~/.ssh/trading-bot-key`에 위치
+- SSH 키는 WSL 내부 `~/.ssh/trading-bot4`에 위치
 - 모든 Python 스크립트는 WSL Python으로 실행
 - systemd 서비스 파일은 EC2 버전 자동 선택
 - 배포 시 로그 파일 권한은 sudo로 처리
@@ -457,3 +455,16 @@ python3 scripts/update_project_status.py --commit
 
 *최종 업데이트: 2025년 6월 30일*
 *작성자: Claude Code Assistant*
+
+유용한 명령어:
+  서비스 상태:     sudo systemctl status albratrading-multi
+  서비스 시작:     sudo systemctl start albratrading-multi
+  서비스 중지:     sudo systemctl stop albratrading-multi
+  서비스 재시작:   sudo systemctl restart albratrading-multi
+  실시간 로그:     sudo journalctl -u albratrading-multi -f
+  모드 전환:       ./setup_systemd_multi.sh switch
+
+  ssh -i ~/.ssh/trading-bot4 ubuntu@43.201.76.89 
+cd /home/ubuntu/AlbraTrading
+source venv/bin/activate
+

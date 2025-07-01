@@ -73,6 +73,10 @@
   - config/: deployment.yaml
   - .claude/: SESSION_LOG.md, settings.local.json
 
+- 2025-07-01 12:33:47 KST: [28f5112] docs: EC2 마이그레이션 상태 기록 및 바이낸스 API 접속 이슈 문서화
+  - scripts/: albratrading-multi.service
+  - .claude/: PROJECT_STATUS.md, SESSION_LOG.md, settings.local.json
+
 ### 주요 성과
 1. ✅ Position Status Enum 오류 해결 - to_dict() 메서드에서 enum과 string 모두 처리
 2. ✅ 텔레그램 "잘고" → "잔고" 타이포 수정

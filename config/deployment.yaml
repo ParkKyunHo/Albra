@@ -21,11 +21,11 @@ environments:
   windows:
     # Windows 개발 환경 (deploy.bat 실행 위치)
     base_path: C:\AlbraTrading
-    ssh_key: "%USERPROFILE%\.ssh\trading-bot-key"
+    ssh_key: "%USERPROFILE%\.ssh\trading-bot4"
     
 deployment:
   # EC2 연결 정보
-  ec2_ip: 54.88.60.48
+  ec2_ip: 43.201.76.89
   ssh_user: ubuntu
   
   # 파일 동기화 설정

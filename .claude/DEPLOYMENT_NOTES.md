@@ -48,7 +48,7 @@ deploy.bat       →        deploy_wsl.sh      →       AlbraTrading
 |------|------|-----------|
 | WSL 내부 작업 | `/home/albra/AlbraTrading` | bash 스크립트 |
 | EC2 배포 경로 | `/home/ubuntu/AlbraTrading` | SSH/SCP 명령 |
-| SSH 키 | `~/.ssh/trading-bot-key` | WSL 내부 |
+| SSH 키 | `~/.ssh/trading-bot4` | WSL 내부 |
 
 ### systemd 서비스 파일 관리
 
@@ -62,8 +62,8 @@ EC2와 로컬 환경의 경로 차이를 해결하기 위해 버전별 서비스
 ### 주의사항
 
 1. **SSH 키 위치**
-   - Windows: `%USERPROFILE%\.ssh\trading-bot-key`
-   - WSL: `~/.ssh/trading-bot-key`
+   - Windows: `%USERPROFILE%\.ssh\trading-bot4`
+   - WSL: `~/.ssh/trading-bot4`
    - 배포 스크립트는 WSL 키 사용
 
 2. **Python 실행**
@@ -90,7 +90,7 @@ EC2와 로컬 환경의 경로 차이를 해결하기 위해 버전별 서비스
 
 #### SSH 연결 실패
 - 원인: SSH 키 경로 문제
-- 해결: WSL 내부 `~/.ssh/trading-bot-key` 확인
+- 해결: WSL 내부 `~/.ssh/trading-bot4` 확인
 
 #### 파일 업로드 실패
 - 원인: 경로 또는 권한 문제
