@@ -34,7 +34,11 @@ class DashboardApp:
         
         # 시스템 컴포넌트 참조
         self.position_manager = position_manager
-        self.strategies = strategies or []
+        # strategies가 dict인 경우 list로 변환 (멀티 계좌 모드 지원)
+        if isinstance(strategies, dict):
+            self.strategies = list(strategies.values())
+        else:
+            self.strategies = strategies or []
         self.config = config or {}
         self.binance_api = binance_api  # exchange 대신 binance_api 사용
         self.state_manager = state_manager

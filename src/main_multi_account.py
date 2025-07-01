@@ -144,6 +144,7 @@ class MultiAccountTradingSystem:
         self.state_manager: Optional[StateManager] = None
         self.notification_manager: Optional[SmartNotificationManager] = None
         self.telegram_notifier: Optional[TelegramNotifier] = None
+        self.telegram_handler = None  # Telegram Command Handler 추가
         
         # 단일 모드 컴포넌트
         self.binance_api: Optional[BinanceAPI] = None
@@ -247,6 +248,15 @@ class MultiAccountTradingSystem:
                 config_manager=self.config_manager
             )
             logger.info("✓ Smart Notification Manager 초기화 완료")
+            
+            # Telegram Command Handler 초기화 추가
+            if self.telegram_notifier:
+                from src.utils.telegram_commands import setup_telegram_commands
+                self.telegram_handler = await setup_telegram_commands(
+                    trading_system=self,
+                    notification_manager=self.notification_manager
+                )
+                logger.info("✓ Telegram Command Handler 초기화 완료")
             
         except Exception as e:
             logger.error(f"알림 시스템 초기화 실패: {e}")
@@ -515,8 +525,35 @@ class MultiAccountTradingSystem:
                     self.strategies[strategy_key] = strategy
                     logger.info(f"✓ [{account_id}] {strategy_name} 전략 초기화 완료")
             
-            # 마스터 계좌 전략도 초기화
-            # TODO: 마스터 계좌 전략 초기화
+            # 마스터 계좌 전략도 초기화 (TFPE 전략)
+            if self.multi_account_manager.master_account:
+                master_api = self.multi_account_manager.api_clients.get('MASTER')
+                master_position_manager = self.multi_account_manager.position_managers.get('MASTER')
+                
+                if master_api and master_position_manager:
+                    # TFPE 전략 할당
+                    tfpe_config = self.config_manager.get_strategy_config('tfpe')
+                    if tfpe_config.get('enabled', False):
+                        logger.info("[MASTER] TFPE 전략 초기화")
+                        
+                        # 전략 인스턴스 생성
+                        strategy_factory = get_strategy_factory()
+                        tfpe_strategy = strategy_factory.create_strategy(
+                            name='tfpe',
+                            binance_api=master_api,
+                            position_manager=master_position_manager,
+                            custom_config=tfpe_config
+                        )
+                        
+                        if tfpe_strategy:
+                            # 마스터 계좌용 키로 저장
+                            strategy_key = "MASTER:TFPE"
+                            self.strategies[strategy_key] = tfpe_strategy
+                            logger.info("✓ [MASTER] TFPE 전략 초기화 완료")
+                        else:
+                            logger.error("[MASTER] TFPE 전략 생성 실패")
+                else:
+                    logger.error("[MASTER] 필수 컴포넌트 없음")
             
             logger.info(f"총 {len(self.strategies)}개 전략 초기화 완료")
             
@@ -778,6 +815,16 @@ class MultiAccountTradingSystem:
             )
             main_tasks.append(task)
             self.tasks.append(task)
+            
+            # 7. 텔레그램 명령어 폴링 추가
+            if self.telegram_handler:
+                task = asyncio.create_task(
+                    self.telegram_handler.run_polling(),
+                    name="telegram_polling"
+                )
+                main_tasks.append(task)
+                self.tasks.append(task)
+                logger.info("✓ 텔레그램 명령어 폴링 시작")
             
             logger.info(f"총 {len(main_tasks)}개 태스크 시작")
             

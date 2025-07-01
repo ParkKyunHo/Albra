@@ -52,6 +52,11 @@
   - src/: dashboard.py, dashboard.html, performance.html
   - .claude/: SESSION_LOG.md
 
+- 2025-07-02 03:40:09 KST: [5fa7d77] fix: 멀티 계좌 모드 전략 활성화 및 대시보드 호환성 개선
+  - src/: compatibility.py
+  - config/: config.yaml
+  - .claude/: SESSION_LOG.md
+
 ### 다음 작업
 - [ ] 계속 진행
 
