@@ -116,6 +116,10 @@
   - src/: smart_notification_manager.py
   - .claude/: SESSION_LOG.md
 
+- 2025-07-02 05:47:16 KST: [41ad9d6] fix: 멀티 계좌 활성 계좌 카운팅 수정 - MASTER 계좌도 active_accounts에 포함
+  - src/: account_manager.py
+  - .claude/: SESSION_LOG.md
+
 ### 다음 작업
 - [ ] 배포 테스트 및 알림 동작 확인
 
