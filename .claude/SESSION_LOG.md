@@ -12,6 +12,9 @@
   - .claude/: DEPLOYMENT_NOTES.md, EC2_MIGRATION_COMPLETE.md, EC2_MIGRATION_STATUS.md
   - docs/: EC2_MIGRATION_GUIDE.md
 
+- 2025-07-02 00:27:50 KST: [3cda7a2] feat: EC2 마이그레이션 완료 - 서울 리전(43.201.76.89)으로 이전
+  - .claude/: SESSION_LOG.md
+
 ### 다음 작업
 - [ ] 계속 진행
 

@@ -28,7 +28,7 @@ LimitNOFILE=65536
 LimitNPROC=4096
 
 # 메모리 제한 (멀티 계좌는 더 많은 메모리 필요)
-MemoryLimit=4G
+MemoryMax=4G
 
 # 실패 시 재시작 정책
 StartLimitInterval=300

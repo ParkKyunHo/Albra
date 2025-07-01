@@ -28,7 +28,7 @@ LimitNOFILE=65536
 LimitNPROC=4096
 
 # 메모리 제한
-MemoryLimit=2G
+MemoryMax=2G
 
 # 실패 시 재시작 정책
 StartLimitInterval=300

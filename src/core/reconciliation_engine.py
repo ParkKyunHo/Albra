@@ -317,12 +317,20 @@ class ReconciliationEngine:
             return result
     
     async def _get_system_positions(self, symbols: Optional[List[str]] = None) -> Dict[str, Any]:
-        """시스템 포지션 조회"""
+        """시스템 포지션 조회 - 복합 키 지원"""
         positions = {}
         
         all_positions = self.position_manager.get_all_positions()
         
-        for symbol, position in all_positions.items():
+        # 복합 키(symbol_strategy) 처리
+        for key, position in all_positions.items():
+            # 복합 키에서 심볼 추출
+            if '_' in key and hasattr(position, 'symbol'):
+                symbol = position.symbol
+            else:
+                # 기존 단일 키 호환성
+                symbol = key
+            
             if symbols and symbol not in symbols:
                 continue
             
@@ -330,18 +338,45 @@ class ReconciliationEngine:
                 # 상태 머신에서 상태 정보 추가
                 state_context = self.state_machine.get_context(position.position_id)
                 
-                positions[symbol] = {
-                    'position_id': position.position_id,
-                    'symbol': symbol,
-                    'side': position.side,
-                    'size': position.size,
-                    'entry_price': position.entry_price,
-                    'leverage': position.leverage,
-                    'is_manual': position.is_manual,
-                    'status': position.status,
-                    'state': state_context.current_state.value if state_context else 'UNKNOWN',
-                    'last_updated': position.last_updated
-                }
+                # 심볼별로 여러 전략 포지션이 있을 수 있으므로 크기 합산
+                if symbol in positions:
+                    # 동일 심볼에 여러 전략이 있는 경우
+                    existing = positions[symbol]
+                    # 같은 방향이면 크기 합산
+                    if existing['side'] == position.side:
+                        existing['size'] += position.size
+                        existing['strategy_names'].append(position.strategy_name)
+                    else:
+                        # 다른 방향이면 별도로 저장 (symbol_side를 키로)
+                        positions[f"{symbol}_{position.side}"] = {
+                            'position_id': position.position_id,
+                            'symbol': symbol,
+                            'side': position.side,
+                            'size': position.size,
+                            'entry_price': position.entry_price,
+                            'leverage': position.leverage,
+                            'is_manual': position.is_manual,
+                            'strategy_name': position.strategy_name,
+                            'strategy_names': [position.strategy_name],
+                            'status': position.status,
+                            'state': state_context.current_state.value if state_context else 'UNKNOWN',
+                            'last_updated': position.last_updated
+                        }
+                else:
+                    positions[symbol] = {
+                        'position_id': position.position_id,
+                        'symbol': symbol,
+                        'side': position.side,
+                        'size': position.size,
+                        'entry_price': position.entry_price,
+                        'leverage': position.leverage,
+                        'is_manual': position.is_manual,
+                        'strategy_name': position.strategy_name,
+                        'strategy_names': [position.strategy_name],
+                        'status': position.status,
+                        'state': state_context.current_state.value if state_context else 'UNKNOWN',
+                        'last_updated': position.last_updated
+                    }
         
         return positions
     
@@ -571,11 +606,21 @@ class ReconciliationEngine:
         return result
     
     async def _update_system_position(self, discrepancy: Discrepancy):
-        """시스템 포지션 업데이트"""
+        """시스템 포지션 업데이트 - 복합 키 지원"""
         symbol = discrepancy.symbol
         ex_data = discrepancy.exchange_data
         
-        position = self.position_manager.get_position(symbol)
+        # 복합 키를 사용하여 포지션 찾기
+        position = None
+        position_key = None
+        
+        # 모든 포지션을 검색하여 해당 심볼의 포지션 찾기
+        for key, pos in self.position_manager.positions.items():
+            if pos.symbol == symbol and pos.status in ['ACTIVE', 'MODIFIED']:
+                position = pos
+                position_key = key
+                break
+        
         if position:
             # 크기 업데이트
             if discrepancy.discrepancy_type == DiscrepancyType.SIZE_MISMATCH:
@@ -588,14 +633,21 @@ class ReconciliationEngine:
                     PositionState.MODIFIED,
                     f"크기 불일치 해결: {old_size} → {ex_data['size']}"
                 )
+                
+                logger.info(f"포지션 크기 업데이트: {symbol} ({position.strategy_name}) - {old_size} → {ex_data['size']}")
             
             # 가격 업데이트
             elif discrepancy.discrepancy_type == DiscrepancyType.PRICE_MISMATCH:
+                old_price = position.entry_price
                 position.entry_price = ex_data['entry_price']
                 position.last_updated = datetime.now().isoformat()
+                
+                logger.info(f"포지션 가격 업데이트: {symbol} ({position.strategy_name}) - {old_price} → {ex_data['entry_price']}")
             
             # 캐시 저장
             await self.position_manager._save_positions_batch()
+        else:
+            logger.warning(f"업데이트할 포지션을 찾을 수 없음: {symbol}")
     
     async def _update_exchange_position(self, discrepancy: Discrepancy):
         """거래소 포지션 업데이트"""
@@ -607,7 +659,7 @@ class ReconciliationEngine:
             await self.binance_api.set_leverage(symbol, sys_data['leverage'])
     
     async def _create_system_position(self, discrepancy: Discrepancy):
-        """시스템에 포지션 생성"""
+        """시스템에 포지션 생성 - 복합 키 지원"""
         ex_data = discrepancy.exchange_data
         
         # 포지션 ID 생성
@@ -616,6 +668,9 @@ class ReconciliationEngine:
             ex_data['side'],
             ex_data['entry_price']
         )
+        
+        # reconciliation으로 생성된 수동 포지션은 MANUAL 전략명 사용
+        strategy_name = 'MANUAL'
         
         # 포지션 생성
         from src.core.position_manager import Position
@@ -627,7 +682,7 @@ class ReconciliationEngine:
             leverage=ex_data['leverage'],
             position_id=position_id,
             is_manual=True,  # 수동 포지션으로 표시
-            strategy_name=None,
+            strategy_name=strategy_name,
             created_at=datetime.now().isoformat(),
             last_updated=datetime.now().isoformat(),
             initial_size=ex_data['size'],
@@ -638,21 +693,27 @@ class ReconciliationEngine:
         position.add_tag("reconciliation_created")
         position.add_tag(f"created_{datetime.now().strftime('%Y%m%d')}")
         
-        # 포지션 매니저에 추가
-        self.position_manager.positions[ex_data['symbol']] = position
+        # 복합 키로 포지션 매니저에 추가
+        position_key = f"{ex_data['symbol']}_{strategy_name}"
+        self.position_manager.positions[position_key] = position
+        
+        # 전략별 인덱스 업데이트
+        if strategy_name not in self.position_manager.strategy_positions:
+            self.position_manager.strategy_positions[strategy_name] = []
+        self.position_manager.strategy_positions[strategy_name].append(position_key)
         
         # 상태 머신에 등록
         self.state_machine.create_position_context(
             position_id,
             ex_data['symbol'],
             PositionState.ACTIVE,
-            {'source': 'reconciliation'}
+            {'source': 'reconciliation', 'strategy': strategy_name}
         )
         
         # 캐시 저장
         await self.position_manager._save_positions_batch()
         
-        logger.info(f"Reconciliation으로 포지션 생성: {ex_data['symbol']}")
+        logger.info(f"Reconciliation으로 포지션 생성: {ex_data['symbol']} (전략: {strategy_name})")
     
     async def _close_position(self, discrepancy: Discrepancy):
         """포지션 청산"""
