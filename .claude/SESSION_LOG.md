@@ -26,6 +26,10 @@
   - scripts/: check_position_migration.py
   - .claude/: SESSION_LOG.md
 
+- 2025-07-02 01:44:28 KST: [111422b] feat: 성과 분석 대시보드 구현
+  - src/: main_multi_account.py, dashboard.py, performance_dashboard.py
+  - .claude/: SESSION_LOG.md, settings.local.json
+
 ### 다음 작업
 - [ ] 계속 진행
 

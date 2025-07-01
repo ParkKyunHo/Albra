@@ -104,7 +104,21 @@ class PerformanceDashboard:
     def _build_performance_overview(self) -> Dict[str, Any]:
         """전체 성과 개요 빌드"""
         if not self.performance_tracker:
-            return {'error': 'Performance tracker not available'}
+            # Performance tracker가 없어도 빈 데이터 반환
+            return {
+                'overall': {
+                    'start_date': None,
+                    'total_trades': 0,
+                    'total_strategies': 0,
+                    'active_days': 0,
+                    'total_pnl': 0,
+                    'win_rate': 0,
+                    'best_strategy': 'N/A',
+                    'worst_strategy': 'N/A'
+                },
+                'strategies': [],
+                'timestamp': datetime.now().isoformat()
+            }
         
         overall = self.performance_tracker.overall_stats
         strategies = self.performance_tracker.strategy_stats
@@ -142,11 +156,44 @@ class PerformanceDashboard:
     def _build_strategy_performance(self, strategy_name: str) -> Dict[str, Any]:
         """특정 전략 상세 성과"""
         if not self.performance_tracker:
-            return {'error': 'Performance tracker not available'}
+            return {
+                'strategy_name': strategy_name,
+                'statistics': {
+                    'total_trades': 0,
+                    'winning_trades': 0,
+                    'losing_trades': 0,
+                    'win_rate': 0,
+                    'profit_factor': 0,
+                    'sharpe_ratio': 0,
+                    'expectancy': 0,
+                    'kelly_fraction': 0,
+                    'avg_win': 0,
+                    'avg_loss': 0,
+                    'max_win': 0,
+                    'max_loss': 0,
+                    'max_consecutive_wins': 0,
+                    'max_consecutive_losses': 0,
+                    'current_streak': 0,
+                    'max_drawdown': 0,
+                    'current_drawdown': 0
+                },
+                'recent_trades': [],
+                'hourly_performance': [],
+                'symbol_performance': [],
+                'timestamp': datetime.now().isoformat()
+            }
         
         stats = self.performance_tracker.strategy_stats.get(strategy_name)
         if not stats:
-            return {'error': f'Strategy {strategy_name} not found'}
+            return {
+                'strategy_name': strategy_name,
+                'error': f'Strategy {strategy_name} not found',
+                'statistics': {},
+                'recent_trades': [],
+                'hourly_performance': [],
+                'symbol_performance': [],
+                'timestamp': datetime.now().isoformat()
+            }
         
         # 거래 내역 필터링
         recent_trades = [
@@ -218,7 +265,11 @@ class PerformanceDashboard:
     def _build_strategy_comparison(self) -> Dict[str, Any]:
         """전략 간 성과 비교"""
         if not self.performance_tracker:
-            return {'error': 'Performance tracker not available'}
+            return {
+                'strategies': [],
+                'rankings': {},
+                'timestamp': datetime.now().isoformat()
+            }
         
         comparisons = []
         
@@ -261,7 +312,23 @@ class PerformanceDashboard:
     def _build_returns_analysis(self, period: str, strategy: Optional[str]) -> Dict[str, Any]:
         """수익률 분석"""
         if not self.performance_tracker:
-            return {'error': 'Performance tracker not available'}
+            return {
+                'period': period.capitalize(),
+                'strategy': strategy or 'All',
+                'returns': [],
+                'statistics': {
+                    'total_return': 0,
+                    'avg_return': 0,
+                    'std_dev': 0,
+                    'sharpe_ratio': 0,
+                    'best_period': 0,
+                    'worst_period': 0,
+                    'positive_periods': 0,
+                    'negative_periods': 0,
+                    'win_rate': 0
+                },
+                'timestamp': datetime.now().isoformat()
+            }
         
         # 거래 내역 필터링
         trades = self.performance_tracker.trade_history
@@ -332,7 +399,23 @@ class PerformanceDashboard:
     def _build_drawdown_analysis(self, strategy: Optional[str]) -> Dict[str, Any]:
         """MDD 분석"""
         if not self.performance_tracker:
-            return {'error': 'Performance tracker not available'}
+            return {
+                'strategy': strategy or 'All',
+                'current_drawdown': 0,
+                'max_drawdown': 0,
+                'peak_value': 0,
+                'drawdown_periods': [],
+                'cumulative_returns': [],
+                'statistics': {
+                    'total_periods': 0,
+                    'avg_duration': 0,
+                    'avg_drawdown': 0,
+                    'worst_drawdown': 0,
+                    'current_underwater': False,
+                    'underwater_duration': 0
+                },
+                'timestamp': datetime.now().isoformat()
+            }
         
         # 거래 내역 필터링
         trades = self.performance_tracker.trade_history
@@ -422,7 +505,22 @@ class PerformanceDashboard:
     def _build_trades_history(self, strategy: Optional[str], days: int, limit: int) -> Dict[str, Any]:
         """거래 내역"""
         if not self.performance_tracker:
-            return {'error': 'Performance tracker not available'}
+            return {
+                'strategy': strategy or 'All',
+                'period_days': days,
+                'trades': [],
+                'summary': {
+                    'total_trades': 0,
+                    'wins': 0,
+                    'losses': 0,
+                    'win_rate': 0,
+                    'total_pnl': 0,
+                    'avg_pnl': 0,
+                    'best_trade': 0,
+                    'worst_trade': 0
+                },
+                'timestamp': datetime.now().isoformat()
+            }
         
         # 날짜 필터
         cutoff_date = datetime.now() - timedelta(days=days)

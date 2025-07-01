@@ -167,6 +167,18 @@ class DashboardApp:
                 logger.error(f"Strategies API 오류: {e}")
                 return jsonify({'error': str(e), 'strategies': []}), 500
         
+        @self.app.route('/api/routes')
+        def api_routes():
+            """등록된 라우트 목록"""
+            routes = []
+            for rule in self.app.url_map.iter_rules():
+                routes.append({
+                    'endpoint': rule.endpoint,
+                    'methods': list(rule.methods),
+                    'path': str(rule)
+                })
+            return jsonify(routes)
+        
         @self.app.route('/api/metrics')
         def api_metrics():
             """시스템 메트릭 API"""
