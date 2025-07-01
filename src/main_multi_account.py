@@ -1191,7 +1191,10 @@ class MultiAccountTradingSystem:
             
             # API 연결 종료
             if self.binance_api:
-                await self.binance_api.cleanup()
+                # UnifiedBinanceAPI는 cleanup이 없을 수 있음
+                if hasattr(self.binance_api, 'cleanup'):
+                    await self.binance_api.cleanup()
+                logger.info("API 연결 정리 완료")
             
             # 멀티 계좌 정리
             if self.multi_account_manager:

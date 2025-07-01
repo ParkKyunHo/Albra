@@ -100,6 +100,10 @@
   - scripts/: deploy_wsl.sh
   - .claude/: SESSION_LOG.md
 
+- 2025-07-02 05:30:44 KST: [c51b6c3] fix: SmartNotificationManager priority 인자 제거 및 strategies list 타입 오류 수정
+  - src/: main_multi_account.py
+  - .claude/: SESSION_LOG.md
+
 ### 다음 작업
 - [ ] 배포 테스트 및 알림 동작 확인
 
