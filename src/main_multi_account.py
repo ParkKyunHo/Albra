@@ -1198,10 +1198,17 @@ class MultiAccountTradingSystem:
             
             # 멀티 계좌 정리
             if self.multi_account_manager:
-                await self.multi_account_manager.cleanup()
+                try:
+                    await self.multi_account_manager.cleanup()
+                    logger.info("멀티 계좌 정리 완료")
+                except Exception as e:
+                    logger.error(f"멀티 계좌 정리 중 오류: {e}")
+                    logger.error(traceback.format_exc())
             
             # 6. 종료 알림 (모든 경우에 전송)
+            logger.info("6. 종료 알림 전송")
             if self.notification_manager:
+                logger.info(f"notification_manager 존재: {self.notification_manager is not None}")
                 # 종료 사유에 따른 메시지 구성
                 if reason == ShutdownReason.NORMAL:
                     title = "✅ 시스템 정상 종료"
@@ -1219,18 +1226,24 @@ class MultiAccountTradingSystem:
                     title = "🛑 시스템 종료"
                     emoji = "🛑"
                 
-                await self.notification_manager.send_alert(
-                    event_type="SYSTEM_SHUTDOWN",
-                    title=title,
-                    message=(
-                        f"{emoji} <b>AlbraTrading 시스템 종료</b>\n\n"
-                        f"<b>종료 사유:</b> {reason.value}\n"
-                        f"<b>운영 모드:</b> {'멀티 계좌' if self.mode == OperationMode.MULTI else '단일 계좌'}\n"
-                        f"<b>실행 시간:</b> {self.metrics.to_dict()['uptime_hours']}시간\n"
-                        f"<b>활성 포지션:</b> {len(self.unified_position_manager.get_active_positions()) if self.unified_position_manager else 0}개"
-                    ),
-                    force=True
-                )
+                logger.info(f"종료 알림 전송 시도: {title}")
+                try:
+                    result = await self.notification_manager.send_alert(
+                        event_type="SYSTEM_SHUTDOWN",
+                        title=title,
+                        message=(
+                            f"{emoji} <b>AlbraTrading 시스템 종료</b>\n\n"
+                            f"<b>종료 사유:</b> {reason.value}\n"
+                            f"<b>운영 모드:</b> {'멀티 계좌' if self.mode == OperationMode.MULTI else '단일 계좌'}\n"
+                            f"<b>실행 시간:</b> {self.metrics.to_dict()['uptime_hours']}시간\n"
+                            f"<b>활성 포지션:</b> {len(self.unified_position_manager.get_active_positions()) if self.unified_position_manager else 0}개"
+                        ),
+                        force=True
+                    )
+                    logger.info(f"종료 알림 전송 결과: {result}")
+                except Exception as e:
+                    logger.error(f"종료 알림 전송 실패: {e}")
+                    logger.error(traceback.format_exc())
             
             # 알림 시스템 정리
             if self.telegram_notifier:

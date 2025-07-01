@@ -104,6 +104,10 @@
   - src/: main_multi_account.py
   - .claude/: SESSION_LOG.md
 
+- 2025-07-02 05:34:21 KST: [ebde3b8] fix: UnifiedBinanceAPI cleanup 메서드 체크 추가
+  - src/: main_multi_account.py
+  - .claude/: SESSION_LOG.md
+
 ### 다음 작업
 - [ ] 배포 테스트 및 알림 동작 확인
 
