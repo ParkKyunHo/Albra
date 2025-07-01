@@ -112,6 +112,10 @@
   - src/: main_multi_account.py
   - .claude/: SESSION_LOG.md
 
+- 2025-07-02 05:42:25 KST: [9313f77] fix: SmartNotificationManager에 SYSTEM_SHUTDOWN 이벤트 레벨 추가
+  - src/: smart_notification_manager.py
+  - .claude/: SESSION_LOG.md
+
 ### 다음 작업
 - [ ] 배포 테스트 및 알림 동작 확인
 

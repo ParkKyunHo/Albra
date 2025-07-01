@@ -323,6 +323,7 @@ class MultiAccountManager:
                 
                 if await master_api.initialize():
                     self.api_clients['MASTER'] = master_api
+                    self.stats['active_accounts'] += 1  # 마스터 계좌도 활성 계좌에 포함
                     logger.info("✓ 마스터 계좌 API 연결")
                 else:
                     logger.error("마스터 계좌 API 연결 실패")
