@@ -65,6 +65,10 @@
   - src/: zlmacd_ichimoku_strategy.py
   - .claude/: SESSION_LOG.md
 
+- 2025-07-02 04:24:06 KST: [0b49ec8] fix: 텔레그램 봇 초기화 오류 수정 - TelegramCommands 직접 생성 및 is_running 속성 추가
+  - src/: main_multi_account.py
+  - .claude/: SESSION_LOG.md
+
 ### 다음 작업
 - [ ] 계속 진행
 

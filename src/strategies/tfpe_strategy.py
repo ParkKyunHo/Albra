@@ -102,6 +102,9 @@ class TFPEStrategy(BaseStrategy):
             'SOLUSDT', 'XRPUSDT', 'ADAUSDT'
         ])
         
+        # 대시보드 호환성을 위한 symbols 속성
+        self.symbols = self.major_coins
+        
         # 실시간 모니터링 컴포넌트
         self.price_monitor = None
         self.signal_processor = None

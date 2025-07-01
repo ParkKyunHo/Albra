@@ -164,7 +164,8 @@ class MultiAccountTradingSystem:
         self.mdd_manager: Optional[ImprovedMDDManager] = None
         
         # 전략
-        self.strategies: Dict[str, Any] = {}
+        self.strategies_dict: Dict[str, Any] = {}  # 계좌별 전략 관리 (내부 용도)
+        self.strategies: List[Any] = []  # main.py 호환성 위한 리스트
         
         # 웹 대시보드
         self.dashboard: Optional[DashboardApp] = None
@@ -318,6 +319,11 @@ class MultiAccountTradingSystem:
             # 6. 웹 대시보드 초기화
             await self._initialize_dashboard()
             
+            # 7. 호환성을 위한 alias 설정 (main.py와 동일한 구조)
+            self.position_manager = self.unified_position_manager
+            self.binance_api = self.unified_api
+            self.exchange = self.unified_api  # main.py 호환성
+            
             self.initialization_complete = True
             logger.info("✅ 단일 계좌 모드 초기화 완료")
             
@@ -384,6 +390,11 @@ class MultiAccountTradingSystem:
             
             # 6. 웹 대시보드 초기화
             await self._initialize_dashboard()
+            
+            # 7. 호환성을 위한 alias 설정 (main.py와 동일한 구조)
+            self.position_manager = self.unified_position_manager
+            self.binance_api = self.unified_api
+            self.exchange = self.unified_api  # main.py 호환성
             
             self.initialization_complete = True
             logger.info("✅ 멀티 계좌 모드 초기화 완료")
@@ -478,7 +489,8 @@ class MultiAccountTradingSystem:
                 )
                 
                 if strategy:
-                    self.strategies[strategy_name] = strategy
+                    self.strategies_dict[strategy_name] = strategy
+                    self.strategies.append(strategy)  # 리스트에도 추가
                     logger.info(f"✓ {strategy_name} 전략 초기화 완료")
                 else:
                     logger.error(f"{strategy_name} 전략 생성 실패")
@@ -530,7 +542,8 @@ class MultiAccountTradingSystem:
                 if strategy:
                     # 계좌 ID를 포함한 키로 저장
                     strategy_key = f"{account_id}:{strategy_name}"
-                    self.strategies[strategy_key] = strategy
+                    self.strategies_dict[strategy_key] = strategy
+                    self.strategies.append(strategy)  # 리스트에도 추가
                     logger.info(f"✓ [{account_id}] {strategy_name} 전략 초기화 완료")
             
             # 마스터 계좌 전략도 초기화 (TFPE 전략)
@@ -556,7 +569,8 @@ class MultiAccountTradingSystem:
                         if tfpe_strategy:
                             # 마스터 계좌용 키로 저장
                             strategy_key = "MASTER:TFPE"
-                            self.strategies[strategy_key] = tfpe_strategy
+                            self.strategies_dict[strategy_key] = tfpe_strategy
+                            self.strategies.append(tfpe_strategy)  # 리스트에도 추가
                             logger.info("✓ [MASTER] TFPE 전략 초기화 완료")
                         else:
                             logger.error("[MASTER] TFPE 전략 생성 실패")
@@ -768,7 +782,7 @@ class MultiAccountTradingSystem:
             self.tasks.append(task)
             
             # 3. 전략 실행
-            for name, strategy in self.strategies.items():
+            for name, strategy in self.strategies_dict.items():
                 task = asyncio.create_task(
                     self._run_strategy(name, strategy),
                     name=f"strategy_{name}"
