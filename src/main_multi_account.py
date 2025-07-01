@@ -19,6 +19,7 @@ import argparse
 import logging
 import traceback
 from typing import Dict, List, Optional, Any, Union, Callable
+from dotenv import load_dotenv
 from datetime import datetime, timedelta
 from dataclasses import dataclass, field
 from enum import Enum
@@ -784,11 +785,14 @@ class MultiAccountTradingSystem:
                 
                 # Position Sync Monitor 실행
                 if self.position_sync_monitor:
-                    await self.position_sync_monitor.monitor()
+                    await self.position_sync_monitor.check_sync_status()
                 
                 # MDD Manager 체크
-                if self.mdd_manager:
-                    await self.mdd_manager.check_and_apply_protection()
+                if self.mdd_manager and self.binance_api:
+                    # 현재 잔고 조회
+                    current_capital = await self.binance_api.get_account_balance()
+                    if current_capital:
+                        mdd_status = await self.mdd_manager.check_mdd_restrictions(current_capital)
                 
                 # 대기
                 await asyncio.sleep(
@@ -1146,6 +1150,9 @@ Examples:
 
 async def main():
     """메인 진입점"""
+    # .env 파일 로드
+    load_dotenv()
+    
     # 명령행 인자 파싱
     args = parse_arguments()
     

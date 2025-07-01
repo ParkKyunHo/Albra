@@ -35,6 +35,11 @@
   - scripts/: dashboard_tunnel.bat, test_performance_api.py
   - .claude/: SESSION_LOG.md
 
+- 2025-07-02 02:03:27 KST: [b3c77e7] fix: pandas/numpy 의존성 제거로 성과 대시보드 호환성 개선
+  - src/: performance_dashboard.py
+  - scripts/: test_local_dashboard.py
+  - .claude/: SESSION_LOG.md
+
 ### 다음 작업
 - [ ] 계속 진행
 

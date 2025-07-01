@@ -66,22 +66,22 @@ class UnifiedPositionManager:
             # 단일 모드
             return self.single_manager.get_all_positions()
     
-    def get_active_positions(self, account_id: Optional[str] = None) -> List[Position]:
+    def get_active_positions(self, account_id: Optional[str] = None, include_manual: bool = True) -> List[Position]:
         """활성 포지션 조회"""
         if self.is_multi_mode:
             if account_id:
                 # 특정 계좌의 포지션
                 position_manager = self.multi_manager.position_managers.get(account_id)
-                return position_manager.get_active_positions() if position_manager else []
+                return position_manager.get_active_positions(include_manual=include_manual) if position_manager else []
             else:
                 # 모든 계좌의 포지션
                 all_positions = []
                 for pm in self.multi_manager.position_managers.values():
-                    all_positions.extend(pm.get_active_positions())
+                    all_positions.extend(pm.get_active_positions(include_manual=include_manual))
                 return all_positions
         else:
             # 단일 모드
-            return self.single_manager.get_active_positions()
+            return self.single_manager.get_active_positions(include_manual=include_manual)
     
     async def add_position(self, symbol: str, side: str, size: float, 
                           entry_price: float, leverage: int, strategy_name: str,
@@ -137,6 +137,22 @@ class UnifiedPositionManager:
         # 기본값: 마스터 계좌
         return 'MASTER'
     
+    @property
+    def positions(self) -> Dict[str, Position]:
+        """positions 속성 - 하위 호환성을 위해"""
+        if self.is_multi_mode:
+            # 멀티 모드에서는 모든 포지션을 병합하여 반환
+            all_positions = {}
+            for account_id, pm in self.multi_manager.position_managers.items():
+                for symbol, position in pm.positions.items():
+                    # 복합 키 사용
+                    key = f"{account_id}:{symbol}"
+                    all_positions[key] = position
+            return all_positions
+        else:
+            # 단일 모드
+            return self.single_manager.positions
+    
     def get_position_summary(self) -> Dict[str, Any]:
         """포지션 요약 정보"""
         if self.is_multi_mode:
@@ -162,6 +178,29 @@ class UnifiedPositionManager:
         else:
             # 단일 모드
             return self.single_manager.get_position_summary()
+    
+    def get_position(self, symbol: str, strategy_name: str = None, account_id: Optional[str] = None) -> Optional[Position]:
+        """특정 포지션 조회"""
+        if self.is_multi_mode:
+            if account_id:
+                # 특정 계좌에서 조회
+                position_manager = self.multi_manager.position_managers.get(account_id)
+                if position_manager and hasattr(position_manager, 'get_position'):
+                    return position_manager.get_position(symbol, strategy_name)
+            else:
+                # 모든 계좌에서 검색
+                for pm in self.multi_manager.position_managers.values():
+                    if hasattr(pm, 'get_position'):
+                        position = pm.get_position(symbol, strategy_name)
+                        if position:
+                            return position
+            return None
+        else:
+            # 단일 모드
+            if hasattr(self.single_manager, 'get_position'):
+                return self.single_manager.get_position(symbol, strategy_name)
+            # 구버전 호환성을 위한 폴백
+            return self.single_manager.positions.get(symbol)
 
 
 class UnifiedBinanceAPI:
@@ -235,6 +274,37 @@ class UnifiedBinanceAPI:
         
         # 기본값: 마스터 계좌
         return 'MASTER'
+    
+    async def get_server_time(self) -> Optional[int]:
+        """서버 시간 조회"""
+        if self.is_multi_mode:
+            # 마스터 계좌 API 사용
+            api_client = self.multi_manager.api_clients.get('MASTER')
+            return await api_client.get_server_time() if api_client else None
+        else:
+            return await self.single_api.get_server_time()
+    
+    async def get_klines(self, symbol: str, interval: str, limit: int = 500) -> Optional[List]:
+        """캔들 데이터 조회"""
+        if self.is_multi_mode:
+            # 마스터 계좌 API 사용 (시장 데이터는 모든 계좌 동일)
+            api_client = self.multi_manager.api_clients.get('MASTER')
+            return await api_client.get_klines(symbol, interval, limit) if api_client else None
+        else:
+            return await self.single_api.get_klines(symbol, interval, limit)
+    
+    async def get_positions(self) -> Optional[List[Dict]]:
+        """거래소 포지션 조회"""
+        if self.is_multi_mode:
+            # 모든 계좌의 포지션 병합
+            all_positions = []
+            for api_client in self.multi_manager.api_clients.values():
+                positions = await api_client.get_positions()
+                if positions:
+                    all_positions.extend(positions)
+            return all_positions
+        else:
+            return await self.single_api.get_positions()
 
 
 class ModeSelector:
