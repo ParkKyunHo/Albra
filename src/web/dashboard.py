@@ -24,7 +24,8 @@ werkzeug_logger.setLevel(logging.ERROR)
 class DashboardApp:
     """웹 대시보드 애플리케이션"""
     
-    def __init__(self):
+    def __init__(self, position_manager=None, binance_api=None, strategies=None, 
+                 config=None, state_manager=None, notification_manager=None):
         self.app = Flask(__name__, 
                         template_folder='templates',
                         static_folder='static')
@@ -32,12 +33,12 @@ class DashboardApp:
         CORS(self.app, resources={r"/api/*": {"origins": "*"}})
         
         # 시스템 컴포넌트 참조
-        self.position_manager = None
-        self.strategies = []
-        self.config = {}
-        self.binance_api = None  # exchange 대신 binance_api 사용
-        self.state_manager = None
-        self.notification_manager = None
+        self.position_manager = position_manager
+        self.strategies = strategies or []
+        self.config = config or {}
+        self.binance_api = binance_api  # exchange 대신 binance_api 사용
+        self.state_manager = state_manager
+        self.notification_manager = notification_manager
         self.performance_tracker = None  # 성과 추적기 추가
         
         # 메트릭 저장
@@ -166,6 +167,18 @@ class DashboardApp:
                 self.metrics['errors_count'] += 1
                 logger.error(f"Strategies API 오류: {e}")
                 return jsonify({'error': str(e), 'strategies': []}), 500
+        
+        @self.app.route('/api/debug')
+        def api_debug():
+            """디버그 정보 API"""
+            return jsonify({
+                'has_position_manager': self.position_manager is not None,
+                'has_binance_api': self.binance_api is not None,
+                'has_strategies': bool(self.strategies),
+                'position_manager_type': type(self.position_manager).__name__ if self.position_manager else None,
+                'binance_api_type': type(self.binance_api).__name__ if self.binance_api else None,
+                'config_system_mode': self.config.get('system', {}).get('mode', 'not_found') if self.config else 'no_config'
+            })
         
         @self.app.route('/api/routes')
         def api_routes():
@@ -313,7 +326,7 @@ class DashboardApp:
             'uptime_formatted': self._format_uptime(uptime),
             'version': '2.0',
             'environment': 'production',
-            'testnet': self.config.get('system', {}).get('mode', 'testnet') == 'testnet'
+            'testnet': self.config.get('system', {}).get('mode', 'live') == 'testnet'
         }
         
         # 실시간 잔고 추가 (기존 코드 유지)

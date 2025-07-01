@@ -530,17 +530,23 @@ class MultiAccountTradingSystem:
             dashboard_config = self.config_manager.config.get('web_dashboard', {})
             
             if dashboard_config.get('enabled', False):
-                self.dashboard = DashboardApp()
-                self.dashboard.position_manager = self.unified_position_manager
-                self.dashboard.binance_api = self.unified_api
-                self.dashboard.strategies = self.strategies
-                self.dashboard.config = self.config_manager.config
-                self.dashboard.state_manager = self.state_manager
+                self.dashboard = DashboardApp(
+                    position_manager=self.unified_position_manager,
+                    binance_api=self.unified_api,
+                    strategies=self.strategies,
+                    config=self.config_manager.config,
+                    state_manager=self.state_manager,
+                    notification_manager=self.notification_manager
+                )
                 
                 # 성과 대시보드 설정 (PerformanceTracker가 있을 경우)
                 if hasattr(self, 'performance_tracker') and self.performance_tracker:
                     self.dashboard.setup_performance_dashboard(self.performance_tracker)
                     logger.info("✓ 성과 대시보드 초기화 완료")
+                
+                # 대시보드가 참조를 유지하도록 추가 설정
+                self.dashboard.notification_manager = self.notification_manager
+                self.dashboard.performance_tracker = self.performance_tracker
                 
                 logger.info("✓ 웹 대시보드 초기화 완료")
             
@@ -744,6 +750,12 @@ class MultiAccountTradingSystem:
                 if is_port_in_use(dashboard_port):
                     logger.warning(f"포트 {dashboard_port}이 이미 사용 중입니다. 대시보드를 시작하지 않습니다.")
                 else:
+                    # 대시보드 속성이 제대로 설정되었는지 확인
+                    logger.info(f"대시보드 속성 확인:")
+                    logger.info(f"  - position_manager: {self.dashboard.position_manager is not None}")
+                    logger.info(f"  - binance_api: {self.dashboard.binance_api is not None}")
+                    logger.info(f"  - config: {self.dashboard.config is not None}")
+                    
                     # Flask는 블로킹 호출이므로 별도 스레드에서 실행
                     from threading import Thread
                     dashboard_thread = Thread(

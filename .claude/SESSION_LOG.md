@@ -40,6 +40,10 @@
   - scripts/: test_local_dashboard.py
   - .claude/: SESSION_LOG.md
 
+- 2025-07-02 02:44:34 KST: [80228ba] fix: 멀티 계좌 모드 동기화 오류 및 호환성 문제 해결
+  - src/: compatibility.py, main_multi_account.py
+  - .claude/: SESSION_LOG.md
+
 ### 다음 작업
 - [ ] 계속 진행
 
