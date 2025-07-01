@@ -144,6 +144,58 @@ async def process_signal(self, signal: TradingSignal) -> ExecutionResult:
 - 3-tier protection: Circuit Breaker → Retry → Timeout
 - 항상 안전한 기본값 반환
 
+#### 3. 오류 수정 시 체계적 접근 (Systematic Error Resolution)
+**"Understanding the whole before fixing the part"**
+
+##### 3.1 프로젝트 구조 완전 파악
+```python
+# 1. 전체 디렉토리 구조 파악
+mcp__filesystem__directory_tree(path="/home/albra/AlbraTrading/src")
+
+# 2. 관련 파일들의 연결 관계 파악
+- main.py vs main_multi_account.py의 구조적 차이
+- core/ 모듈들의 상호 의존성
+- utils/telegram_commands.py가 어떤 컴포넌트를 참조하는지
+```
+
+##### 3.2 코드 정독 및 분석
+```python
+# 파일이 클 경우 섹션별로 나눠서 읽기
+Read(file_path="...", offset=0, limit=100)     # 초기화 부분
+Read(file_path="...", offset=100, limit=100)   # 핵심 로직
+Read(file_path="...", offset=200, limit=100)   # 메서드 구현
+
+# 특정 메서드 위치 찾기
+Bash("grep -n 'def method_name' /path/to/file")
+```
+
+##### 3.3 Sequential Thinking으로 문제 분석
+```python
+# 체계적 사고 과정
+mcp__sequential-thinking__sequentialthinking(
+    thought="1. 오류 메시지 분석: 'object has no attribute X'는 X가 정의되지 않았음을 의미",
+    thoughtNumber=1,
+    totalThoughts=5
+)
+# → 2. X가 어디서 사용되는지 파악
+# → 3. X가 정의되어야 할 위치 확인  
+# → 4. 다른 유사 클래스에서 X가 어떻게 구현되었는지 비교
+# → 5. 해결책 도출 및 부작용 검토
+```
+
+##### 3.4 실제 사례: 텔레그램 오류 수정
+```
+문제: 'MultiAccountTradingSystem' object has no attribute 'config'
+
+분석 과정:
+1. telegram_commands.py에서 self.trading_system.config 사용 확인
+2. main.py의 TradingSystem 클래스 구조 분석
+   → self.config = self.config_manager.config 발견
+3. main_multi_account.py의 MultiAccountTradingSystem 분석
+   → self.config 속성 누락 확인
+4. 해결: MultiAccountTradingSystem에 self.config 추가
+```
+
 ### 코드 표준
 
 #### 1. Type Safety (Jane Street 스타일)
@@ -451,9 +503,20 @@ python3 scripts/update_project_status.py --commit
 2. 시스템 상태: `sudo systemctl status albratrading-single`
 3. 텔레그램 봇: `/status` 명령
 
+## 🎯 핵심 개발 원칙 (Critical Development Principles)
+
+### 오류 수정 시 필수 체크리스트
+1. **구조 파악**: `mcp__filesystem__directory_tree`로 전체 프로젝트 구조 이해
+2. **코드 정독**: Read tool로 관련 코드를 한 줄씩 읽기 (긴 파일은 offset/limit 활용)
+3. **체계적 분석**: `mcp__sequential-thinking__sequentialthinking`으로 문제 분석 및 해결책 도출
+4. **호환성 확인**: main.py와 main_multi_account.py의 구조적 일관성 유지
+5. **통합 테스트**: 수정 후 관련된 모든 컴포넌트 동작 확인
+
+**Remember**: "Fix the root cause, not the symptom"
+
 ---
 
-*최종 업데이트: 2025년 6월 30일*
+*최종 업데이트: 2025년 7월 2일*
 *작성자: Claude Code Assistant*
 
 유용한 명령어:

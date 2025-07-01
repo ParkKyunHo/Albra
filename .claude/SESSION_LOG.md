@@ -73,6 +73,10 @@
   - src/: main_multi_account.py, tfpe_strategy.py
   - .claude/: SESSION_LOG.md
 
+- 2025-07-02 04:46:36 KST: [e9fc205] fix: 텔레그램 명령어 오류 수정 - config 속성 및 get_account_info 메서드 추가
+  - src/: compatibility.py, main_multi_account.py
+  - .claude/: SESSION_LOG.md
+
 ### 다음 작업
 - [ ] 계속 진행
 
