@@ -1,6 +1,22 @@
 # Claude 작업 세션 로그
 
 
+
+## 세션: 2025-07-02
+
+### 작업 요약
+
+- 2025-07-02 00:24:42 KST: [7520830] refactor: EC2 IP 주소 및 SSH 키 업데이트 (54.88.60.48 → 43.201.76.89, trading-bot2 → trading-bot4)
+  - scripts/: check_ec2_status.sh, clean_python312.sh, deploy_wsl.sh
+  - config/: deployment.yaml
+  - .claude/: DEPLOYMENT_NOTES.md, EC2_MIGRATION_COMPLETE.md, EC2_MIGRATION_STATUS.md
+  - docs/: EC2_MIGRATION_GUIDE.md
+
+### 다음 작업
+- [ ] 계속 진행
+
+---
+
 ## 세션: 2025-07-01
 
 ### 작업 요약
