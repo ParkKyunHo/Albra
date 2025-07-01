@@ -133,6 +133,7 @@ class MultiAccountTradingSystem:
         
         # 시스템 상태
         self.running = False
+        self.is_running = False  # telegram_commands 호환성을 위해 추가
         self.shutdown_event = asyncio.Event()
         self.initialization_complete = False
         
@@ -251,12 +252,19 @@ class MultiAccountTradingSystem:
             
             # Telegram Command Handler 초기화 추가
             if self.telegram_notifier:
-                from src.utils.telegram_commands import setup_telegram_commands
-                self.telegram_handler = await setup_telegram_commands(
-                    trading_system=self,
-                    notification_manager=self.notification_manager
-                )
-                logger.info("✓ Telegram Command Handler 초기화 완료")
+                from src.utils.telegram_commands import TelegramCommands
+                bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+                if bot_token:
+                    self.telegram_handler = TelegramCommands(
+                        bot_token=bot_token,
+                        trading_system=self
+                    )
+                    if await self.telegram_handler.initialize():
+                        logger.info("✓ Telegram Command Handler 초기화 완료")
+                        logger.info("TelegramCommands 인스턴스 생성 완료")
+                    else:
+                        logger.error("Telegram Command Handler 초기화 실패")
+                        self.telegram_handler = None
             
         except Exception as e:
             logger.error(f"알림 시스템 초기화 실패: {e}")
@@ -737,6 +745,7 @@ class MultiAccountTradingSystem:
             
             logger.info("🏃 트레이딩 시스템 실행 시작")
             self.running = True
+            self.is_running = True  # telegram_commands 호환성
             
             # 메인 태스크들 시작
             main_tasks = []
@@ -1062,6 +1071,7 @@ class MultiAccountTradingSystem:
             logger.info("=" * 60)
             
             self.running = False
+            self.is_running = False  # telegram_commands 호환성
             
             # 1. 신규 거래 중지
             logger.info("1. 신규 거래 중지")

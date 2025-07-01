@@ -795,3 +795,5 @@ Step 6: 통합 테스트 [대기]
 
 sudo systemctl stop albratrading
 ./scripts/setup_systemd_multi.sh multi
+
+http://43.201.76.89:5000/

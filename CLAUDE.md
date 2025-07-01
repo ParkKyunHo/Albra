@@ -411,134 +411,6 @@ python3 scripts/update_project_status.py --commit
 4. **결정 문서화**: ADR (Architecture Decision Records) 사용
 5. **자동화 원칙**: 두 번 이상 반복하면 자동화
 
-## 🏛️ 멀티 계좌/전략 개발 가이드라인
-
-### 1. 멀티 계좌 모드 초기화 체크리스트
-
-#### 필수 컴포넌트 확인
-- [ ] **Telegram Bot Handler**: `main_multi_account.py`에서 초기화 필수
-- [ ] **Dashboard Strategies**: Dictionary → List 변환 처리
-- [ ] **Master Account Strategy**: TFPE 또는 지정된 전략 할당
-
-#### 초기화 순서
-```python
-1. ConfigManager → StateManager
-2. NotificationManager (TelegramNotifier + TelegramHandler)
-3. MultiAccountManager (Master + Sub accounts)
-4. UnifiedComponents (UnifiedAPI + UnifiedPositionManager)
-5. Strategies (각 계좌별 전략 초기화)
-6. Dashboard (전략 리스트 전달)
-7. Main Tasks (Monitoring + Telegram Polling)
-```
-
-### 2. 전략 할당 규칙
-
-#### Master 계좌
-- **기본 전략**: TFPE (config에서 enabled=true인 경우)
-- **키 형식**: "MASTER:TFPE"
-- **특징**: 높은 포지션 한도, 모든 심볼 거래 가능
-
-#### Sub 계좌
-- **config.yaml에서 지정**: `strategy: "ZLMACD_ICHIMOKU"`
-- **키 형식**: "{account_id}:{strategy_name}" (예: "sub1:ZLMACD_ICHIMOKU")
-- **특징**: 계좌별 독립적 리스크 관리
-
-### 3. 호환성 레이어 설계
-
-#### UnifiedBinanceAPI 필수 속성
-```python
-@property
-def is_multi_account(self) -> bool:
-    """대시보드 호환성"""
-    return self.is_multi_mode
-
-@property 
-def account_apis(self) -> Dict[str, BinanceAPI]:
-    """계좌별 API 클라이언트"""
-    return self.multi_manager.api_clients if self.is_multi_mode else {}
-```
-
-#### Dashboard 전략 처리
-```python
-# strategies가 dict인 경우 list로 변환
-if isinstance(strategies, dict):
-    self.strategies = list(strategies.values())
-else:
-    self.strategies = strategies or []
-```
-
-### 4. 일반적인 문제 해결
-
-#### 문제: Telegram 명령어 작동 안함
-- **원인**: TelegramHandler 초기화 누락
-- **해결**: 
-  1. `_initialize_notification_system()`에서 handler 생성
-  2. `run()` 메서드에서 polling task 추가
-
-#### 문제: 전략명 "Unknown" 표시
-- **원인**: 전략 인스턴스에 strategy_name 속성 없음
-- **해결**: BaseStrategy 상속 확인, strategy_name 설정
-
-#### 문제: 멀티 계좌 모드에서 단일 모드로 실행
-- **원인**: systemd 서비스에 --mode multi 파라미터 누락
-- **해결**: `/etc/systemd/system/albratrading-multi.service` 수정
-
-### 5. 배포 전 체크리스트
-
-#### 코드 검증
-```bash
-# 1. 설정 검증
-python src/main_multi_account.py --validate
-
-# 2. Dry-run 테스트
-python src/main_multi_account.py --mode multi --dry-run
-
-# 3. 구문 검사
-python -m py_compile src/main_multi_account.py
-```
-
-#### 서비스 확인
-```bash
-# 현재 모드 확인
-sudo systemctl status albratrading-multi | grep ExecStart
-
-# 로그 확인 (에러 검색)
-sudo journalctl -u albratrading-multi -n 100 | grep -i error
-```
-
-### 6. 모니터링 포인트
-
-#### 시스템 로그 확인 사항
-- [ ] "텔레그램 명령어 폴링 시작" 메시지
-- [ ] 각 계좌별 전략 초기화 완료 메시지
-- [ ] 대시보드 포트 5000 시작 메시지
-
-#### 런타임 체크
-- [ ] `/status` 명령 응답 확인
-- [ ] 대시보드 전략 표시 정상
-- [ ] 각 계좌별 포지션 독립 관리
-
-### 7. 확장성 고려사항
-
-#### 새 계좌 추가 시
-1. config.yaml에 sub 계좌 설정 추가
-2. 환경변수에 API 키 설정 (SUB{N}_API_KEY)
-3. 전략 할당 및 리스크 파라미터 설정
-
-#### 새 전략 추가 시
-1. BaseStrategy 상속하여 구현
-2. strategy_factory.py에 등록
-3. 복합 키 사용 확인 (symbol_strategy)
-
-### 8. 보안 주의사항
-
-- **API 키**: 절대 코드에 하드코딩 금지
-- **로그**: 민감한 정보 출력 금지
-- **설정**: 환경별 분리 (dev/prod)
-
----
-**중요**: 이 가이드라인은 실제 운영 경험을 바탕으로 지속적으로 업데이트되어야 합니다.
-
 ## 📝 세션 로그 자동화 (2025-01-30 16:00 KST 구현)
 
 ### 자동 기록 시스템
@@ -581,7 +453,7 @@ sudo journalctl -u albratrading-multi -n 100 | grep -i error
 
 ---
 
-*최종 업데이트: 2025년 7월 2일*
+*최종 업데이트: 2025년 6월 30일*
 *작성자: Claude Code Assistant*
 
 유용한 명령어:
@@ -592,7 +464,7 @@ sudo journalctl -u albratrading-multi -n 100 | grep -i error
   실시간 로그:     sudo journalctl -u albratrading-multi -f
   모드 전환:       ./setup_systemd_multi.sh switch
 
-  ssh -i ~/.ssh/trading-bot4 ubuntu@43.201.76.89
+  ssh -i "C:\Users\박균호\.ssh\trading-bot4.pem" ubuntu@43.201.76.89
 cd /home/ubuntu/AlbraTrading
 source venv/bin/activate
 

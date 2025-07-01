@@ -61,6 +61,10 @@
   - src/: main_multi_account.py, dashboard.py
   - .claude/: SESSION_LOG.md
 
+- 2025-07-02 04:13:58 KST: [522a806] fix: ZLMACD_ICHIMOKU 전략에 run_cycle 메서드 추가 - 1시간봉 거래 가능
+  - src/: zlmacd_ichimoku_strategy.py
+  - .claude/: SESSION_LOG.md
+
 ### 다음 작업
 - [ ] 계속 진행
 
