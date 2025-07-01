@@ -390,11 +390,20 @@ python3 scripts/update_project_status.py --commit
 ## 🚀 현재 작업 우선순위
 
 ### 완료된 수정 사항 (2025-07-02)
-1. **WSL 배포 시 종료/시작 알림 문제 해결** ✓
+1. **WSL 배포 시 종료/시작 알림 시스템 완성** ✓
    - main_multi_account.py에 signal handler 추가 (SIGTERM, SIGINT 처리)
    - shutdown 메서드 개선 - 모든 종료 사유에 대해 알림 전송
    - deploy_wsl.sh에 graceful shutdown 로직 추가 (최대 10초 대기)
-   - run 메서드에 추가 시작 알림 구현
+   - SmartNotificationManager에 SYSTEM_SHUTDOWN 이벤트 레벨 추가
+   - 이제 배포 시 종료 알림 → 시작 알림 순서로 정상 전송
+
+2. **멀티 계좌 활성 계좌 카운팅 수정** ✓
+   - account_manager.py: MASTER 계좌도 active_accounts에 포함
+   - 이제 "활성 계좌: 2개, 전체 계좌: 2개"로 올바르게 표시
+
+3. **/strategies 명령어 검증** ✓
+   - 각 전략의 계좌 정보(MASTER, sub1)가 올바르게 표시됨
+   - account_name 속성이 이미 적절히 설정되어 있음 확인
 
 ### 완료된 수정 사항 (2025-06-30)
 1. **Position Status Enum 오류 수정** ✓

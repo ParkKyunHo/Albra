@@ -120,6 +120,9 @@
   - src/: account_manager.py
   - .claude/: SESSION_LOG.md
 
+- 2025-07-02 05:55:33 KST: [be0b4a6] feat: WSL 배포 알림 시스템 완성 및 멀티계좌 카운팅 개선
+  - .claude/: SESSION_LOG.md
+
 ### 다음 작업
 - [ ] 배포 테스트 및 알림 동작 확인
 

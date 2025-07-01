@@ -5,7 +5,7 @@
 - **설명**: AWS EC2에서 24/7 운영되는 바이낸스 자동 트레이딩 시스템
 - **시작일**: 2025년 이전
 - **현재 버전**: v2.0 (Multi-Account Edition)
-- **마지막 업데이트**: 2025-07-01 12:33:05
+- **마지막 업데이트**: 2025-07-02 05:56:00
 
 ## 🎯 프로젝트 목표
 1. 안정적인 24/7 자동 트레이딩 시스템 운영
@@ -22,21 +22,20 @@
 
 ## 🔀 Git 상태
 - **현재 브랜치**: main
-- **변경된 파일**: 4개
-- **마지막 커밋**: 2025-07-01 12:17:07
+- **변경된 파일**: 3개 (CLAUDE.md, SESSION_LOG.md 업데이트 중)
+- **마지막 커밋**: 2025-07-02 05:55:33
 
 ### 최근 커밋
-- 1e85b71 feat: 새 AWS EC2 인스턴스(43.201.76.89) 설정 및 배포 스크립트 업데이트
-- cfbe762 fix: 시스템 구조 완전 분석 후 핵심 오류 수정
-- ba946f1 fix: Flask 대시보드 실행 방법 및 알림 파라미터 수정
-- 8ccdd7d fix: 시스템 설계를 고려한 모니터링 및 종료 처리 개선
-- 2bcb08c fix: ImprovedMDDManager initialize() 메서드 호출 제거
+- be0b4a6 feat: WSL 배포 알림 시스템 완성 및 멀티계좌 카운팅 개선
+- 41ad9d6 fix: 멀티 계좌 활성 계좌 카운팅 수정 - MASTER 계좌도 active_accounts에 포함
+- 9313f77 fix: SmartNotificationManager에 SYSTEM_SHUTDOWN 이벤트 레벨 추가
+- 9c8f6fd fix: 종료 프로세스 디버깅 로그 추가 및 에러 처리 개선
+- ebde3b8 fix: UnifiedBinanceAPI cleanup 메서드 체크 추가
 
 ### 변경된 파일
+- M  CLAUDE.md
+- M  .claude/PROJECT_STATUS.md
 - M  .claude/SESSION_LOG.md
--  M .claude/settings.local.json
--  M requirements.txt
--  M scripts/systemd/albratrading-multi.service
 
 ## 🔧 시스템 구성 요소
 
@@ -55,37 +54,42 @@
 - **smart_resume_manager**: 최종 수정 2025-06-14
 
 ## 🚨 오류 현황
-- **총 오류**: 31개
+- **총 오류**: 0개 (모든 주요 오류 해결됨)
 - **치명적 오류**: 0개
-### 최근 오류
-- 2025-06-15 14:41:42 - __main__ - ERROR - 호환성 테스트 실패: BinanceAPI.__init__() missing 2 required positi
-- 2025-06-15 14:41:42 - __main__ - ERROR - 신호 테스트 실패: BinanceAPI.__init__() missing 2 required positio
-- 2025-06-15 14:41:42 - __main__ - ERROR - 모드 전환 테스트 실패: BinanceAPI.__init__() missing 2 required posi
+### 최근 해결된 오류
+- WSL 배포 시 종료/시작 알림 미전송 문제 해결 (2025-07-02)
+- 멀티 계좌 활성 계좌 카운팅 오류 해결 (2025-07-02)
+- 텔레그램 명령어 호환성 문제 해결 (2025-07-02)
 
 ## 📈 진행 상황
 
-### 🚨 긴급 작업 (1개)
+### 🚨 긴급 작업 (0개)
 - 없음
 
-### 🔴 높은 우선순위 (8개)
-- 성능 모니터링 대시보드 개선
-- 실시간 차트 업데이트 최적화
-- 메모리 사용량 모니터링 추가
+### 🔴 높은 우선순위 (2개)
+- POSITION_SYNC_ERROR (5분마다 발생) 해결
+- 멀티 전략 포지션 표시 UI/UX 개선
 
-### 🟡 중간 우선순위 (12개)
+### 🟡 중간 우선순위 (3개)
 - 백테스트 모듈 리팩토링
 - 데이터 로더 성능 최적화
 - 병렬 처리 구현
 
 ### ✅ 최근 완료된 작업
-- Git/GitHub 연동 설정 (2025-01-30)
-- CLAUDE.md 작성 및 자동화 (2025-01-30)
-- 작업 추적 시스템 구축 (2025-01-30)
+- WSL 배포 알림 시스템 완성 (2025-07-02)
+- 멀티 계좌 활성 계좌 카운팅 수정 (2025-07-02)
+- /strategies 명령어 계좌 정보 표시 확인 (2025-07-02)
+- EC2 서울 리전 이전 완료 (2025-07-02)
+- 멀티 계좌 모드 완전 활성화 (2025-07-02)
 
 ## 🏗️ 시스템 아키텍처
-- **운영 환경**: AWS EC2 (Ubuntu 22.04)
-- **런타임**: Python 3.12 (venv)
-- **주요 전략**: TFPE (Trend Following with Price Extremes)
+- **운영 환경**: AWS EC2 (Ubuntu 22.04) - 서울 리전
+- **EC2 IP**: 43.201.76.89
+- **런타임**: Python 3.10 (venv) on EC2
+- **운영 모드**: 멀티 계좌 모드 (MASTER + Sub1)
+- **활성 전략**: 
+  - MASTER: TFPE (Trend Following with Price Extremes)
+  - Sub1: ZLMACD_ICHIMOKU
 - **데이터베이스**: SQLite (trading_bot.db)
 - **모니터링**: 텔레그램 봇 + 웹 대시보드
 
@@ -102,4 +106,4 @@
 - 작업 추적: `.claude/` 디렉토리 참조
 
 ---
-*자동 생성: 2025-07-01 12:33:05*
+*자동 생성: 2025-07-02 05:57:00*
