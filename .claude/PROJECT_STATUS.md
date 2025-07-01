@@ -5,7 +5,7 @@
 - **설명**: AWS EC2에서 24/7 운영되는 바이낸스 자동 트레이딩 시스템
 - **시작일**: 2025년 이전
 - **현재 버전**: v2.0 (Multi-Account Edition)
-- **마지막 업데이트**: 2025-07-01 01:26:17
+- **마지막 업데이트**: 2025-07-01 12:33:05
 
 ## 🎯 프로젝트 목표
 1. 안정적인 24/7 자동 트레이딩 시스템 운영
@@ -14,33 +14,29 @@
 4. Claude Code를 통한 효율적인 개발 워크플로우
 
 ## 📊 프로젝트 통계
-- **Python 파일**: 142개
+- **Python 파일**: 144개
 - **테스트 파일**: 18개
-- **문서 파일**: 25개
-- **설정 파일**: 46개
-- **총 코드 라인**: 59,866줄
+- **문서 파일**: 27개
+- **설정 파일**: 47개
+- **총 코드 라인**: 60,169줄
 
 ## 🔀 Git 상태
 - **현재 브랜치**: main
-- **변경된 파일**: 14개
-- **마지막 커밋**: 2025-07-01 00:38:25
+- **변경된 파일**: 4개
+- **마지막 커밋**: 2025-07-01 12:17:07
 
 ### 최근 커밋
-- f4ceeb4 Merge remote-tracking branch 'origin/main' - README.md 충돌 해결
-- 46ad735 Initial commit: AlbraTrading 24/7 automated trading system
-- d9ad649 Initial commit
+- 1e85b71 feat: 새 AWS EC2 인스턴스(54.88.60.48) 설정 및 배포 스크립트 업데이트
+- cfbe762 fix: 시스템 구조 완전 분석 후 핵심 오류 수정
+- ba946f1 fix: Flask 대시보드 실행 방법 및 알림 파라미터 수정
+- 8ccdd7d fix: 시스템 설계를 고려한 모니터링 및 종료 처리 개선
+- 2bcb08c fix: ImprovedMDDManager initialize() 메서드 호출 제거
 
 ### 변경된 파일
-- M .claude/settings.local.json
--  M CLAUDE.md
--  M src/core/position_manager.py
--  M src/utils/telegram_commands.py
-- ?? .claude/ANALYSIS_REPORT.md
-- ?? .claude/ERROR_HISTORY.md
-- ?? .claude/FIXES_APPLIED.md
-- ?? .claude/PROJECT_STATUS.md
-- ?? .claude/SESSION_LOG.md
-- ?? .claude/SYSTEM_OVERVIEW.md
+- M  .claude/SESSION_LOG.md
+-  M .claude/settings.local.json
+-  M requirements.txt
+-  M scripts/systemd/albratrading-multi.service
 
 ## 🔧 시스템 구성 요소
 
@@ -106,4 +102,4 @@
 - 작업 추적: `.claude/` 디렉토리 참조
 
 ---
-*자동 생성: 2025-07-01 01:26:17*
+*자동 생성: 2025-07-01 12:33:05*

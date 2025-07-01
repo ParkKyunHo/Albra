@@ -29,6 +29,7 @@ pyyaml==6.0
 
 # Logging
 coloredlogs==15.0.1
+colorlog==6.7.0
 
 # Data Processing
 ta==0.10.2  # 추가 기술적 지표 라이브러리 (추가)

@@ -68,6 +68,11 @@
   - src/: main_multi_account.py
   - .claude/: SESSION_LOG.md
 
+- 2025-07-01 12:17:07 KST: [1e85b71] feat: 새 AWS EC2 인스턴스(54.88.60.48) 설정 및 배포 스크립트 업데이트
+  - scripts/: deploy_wsl.sh, fix_dependencies.bat, remote_debug.bat
+  - config/: deployment.yaml
+  - .claude/: SESSION_LOG.md, settings.local.json
+
 ### 주요 성과
 1. ✅ Position Status Enum 오류 해결 - to_dict() 메서드에서 enum과 string 모두 처리
 2. ✅ 텔레그램 "잘고" → "잔고" 타이포 수정
@@ -76,6 +81,8 @@
 5. ✅ 세션 로그 자동화 시스템 구축 (무한 루프 문제 해결)
 6. ✅ 모든 시간대를 KST로 통일
 
+
+- 2025-07-01 12:33:05: 새 AWS EC2 인스턴스 설정 완료 (54.88.60.48) - Python 3.10 환경 구성, 의존성 설치 완료. 주요 이슈: 바이낸스 API 접속 제한 (Service unavailable from a restricted location) - EC2 리전이 미국(us-east-1)이라 바이낸스 접속 차단됨. 해결방안: 한국/일본 리전으로 EC2 이전 필요
 ### 다음 작업
 - [ ] 3가지 트레이딩 전략 (TFPE+Momentum, ZL EMA, ZL MACD) 상세 분석
 - [ ] POSITION_SYNC_ERROR 및 중복 포지션 표시 문제 조사

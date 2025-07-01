@@ -4,7 +4,8 @@
       "Bash(claude mcp add:*)",
       "mcp__filesystem__read_multiple_files",
       "mcp__filesystem__read_file",
-      "Bash(ssh:*)"
+      "Bash(ssh:*)",
+      "Bash(sudo apt-get install:*)"
     ],
     "deny": []
   }

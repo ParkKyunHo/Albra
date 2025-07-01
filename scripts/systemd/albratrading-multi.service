@@ -13,7 +13,7 @@ Environment="PYTHONPATH=/home/ubuntu/AlbraTrading"
 Environment="PYTHONUNBUFFERED=1"
 
 # 멀티 계좌 모드 실행
-ExecStart=/home/ubuntu/AlbraTrading/venv/bin/python /home/ubuntu/AlbraTrading/src/main.py
+ExecStart=/home/ubuntu/AlbraTrading/venv/bin/python /home/ubuntu/AlbraTrading/src/main_multi_account.py
 
 # 재시작 정책
 Restart=always
