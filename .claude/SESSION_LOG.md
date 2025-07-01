@@ -108,6 +108,10 @@
   - src/: main_multi_account.py
   - .claude/: SESSION_LOG.md
 
+- 2025-07-02 05:40:23 KST: [9c8f6fd] fix: 종료 프로세스 디버깅 로그 추가 및 에러 처리 개선
+  - src/: main_multi_account.py
+  - .claude/: SESSION_LOG.md
+
 ### 다음 작업
 - [ ] 배포 테스트 및 알림 동작 확인
 

@@ -62,6 +62,9 @@ class SmartNotificationManager:
             # CRITICAL - 항상 알림
             'SYSTEM_ERROR': AlertLevel.CRITICAL,
             'SYSTEM_STOPPED': AlertLevel.CRITICAL,
+            'SYSTEM_SHUTDOWN': AlertLevel.CRITICAL,  # 시스템 종료
+            'SYSTEM_INITIALIZED': AlertLevel.HIGH,     # 시스템 초기화
+            'SYSTEM_STARTED': AlertLevel.HIGH,         # 시스템 시작
             'LARGE_LOSS': AlertLevel.CRITICAL,
             'CRITICAL_ERROR': AlertLevel.CRITICAL,
             
