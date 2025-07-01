@@ -69,6 +69,10 @@
   - src/: main_multi_account.py
   - .claude/: SESSION_LOG.md
 
+- 2025-07-02 04:37:19 KST: [3636069] fix: main.py와의 완전한 호환성 확보 - exchange 속성 추가, strategies 리스트로 관리
+  - src/: main_multi_account.py, tfpe_strategy.py
+  - .claude/: SESSION_LOG.md
+
 ### 다음 작업
 - [ ] 계속 진행
 

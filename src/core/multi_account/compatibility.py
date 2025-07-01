@@ -319,6 +319,39 @@ class UnifiedBinanceAPI:
             return all_positions
         else:
             return await self.single_api.get_positions()
+    
+    async def get_account_info(self) -> Optional[Dict]:
+        """계정 정보 조회 - telegram_commands 호환성"""
+        if self.is_multi_mode:
+            # 멀티 모드에서는 마스터 계좌 정보를 기본으로 반환
+            # 필요시 모든 계좌 정보를 병합할 수 있음
+            api_client = self.multi_manager.api_clients.get('MASTER')
+            if api_client:
+                master_info = await api_client.get_account_info()
+                
+                # 서브 계좌들의 잔고를 합산 (옵션)
+                if master_info:
+                    total_balance = float(master_info.get('totalWalletBalance', 0))
+                    total_unrealized = float(master_info.get('totalUnrealizedProfit', 0))
+                    
+                    # 서브 계좌 정보 추가
+                    for account_id, sub_api in self.multi_manager.api_clients.items():
+                        if account_id != 'MASTER':
+                            sub_info = await sub_api.get_account_info()
+                            if sub_info:
+                                total_balance += float(sub_info.get('totalWalletBalance', 0))
+                                total_unrealized += float(sub_info.get('totalUnrealizedProfit', 0))
+                    
+                    # 병합된 정보 반환
+                    master_info['totalWalletBalance'] = str(total_balance)
+                    master_info['totalUnrealizedProfit'] = str(total_unrealized)
+                    master_info['totalMarginBalance'] = str(total_balance + total_unrealized)
+                    
+                return master_info
+            return None
+        else:
+            # 단일 모드
+            return await self.single_api.get_account_info()
 
 
 class ModeSelector:

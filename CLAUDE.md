@@ -26,7 +26,7 @@ AlbraTrading은 AWS EC2에서 24/7 운영되는 개인용 바이낸스 자동 �
 
 ### 현재 운영 상태
 - **서버**: AWS EC2 (Ubuntu 22.04 LTS)
-- **Python**: 3.12 (venv 가상환경)
+- **Python**: 3.10 (venv 가상환경)
 - **운영 모드**: 멀티 계좌 모드 (Master + Sub1)
 - **활성 전략**: 
   - Master: TFPE (Trend Following with Price Extremes)

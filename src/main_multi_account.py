@@ -142,6 +142,7 @@ class MultiAccountTradingSystem:
         
         # 컴포넌트
         self.config_manager: Optional[ConfigManager] = None
+        self.config: Optional[Dict] = None  # main.py와 호환성을 위해 추가
         self.state_manager: Optional[StateManager] = None
         self.notification_manager: Optional[SmartNotificationManager] = None
         self.telegram_notifier: Optional[TelegramNotifier] = None
@@ -204,6 +205,7 @@ class MultiAccountTradingSystem:
             
             # 1. 설정 관리자 초기화
             self.config_manager = ConfigManager()
+            self.config = self.config_manager.config  # main.py와 호환성을 위해 추가
             config = self.config_manager.config
             
             # 2. 상태 관리자 초기화
