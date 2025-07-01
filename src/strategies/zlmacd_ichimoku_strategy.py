@@ -734,6 +734,39 @@ class ZLMACDIchimokuStrategy(BaseStrategy):
         except Exception as e:
             logger.error(f"신규 진입 체크 실패 ({symbol}): {e}")
     
+    async def run_cycle(self):
+        """전략 실행 사이클 - BaseStrategy 인터페이스 구현"""
+        try:
+            # 현재 시간 확인
+            now = datetime.now()
+            
+            # 1시간봉 체크 시간인지 확인 (정시 + 30초)
+            if now.minute == 0 and now.second >= 30 and now.second < 90:
+                # 마지막 실행 시간 확인
+                if hasattr(self, '_last_run_time'):
+                    time_diff = (now - self._last_run_time).total_seconds()
+                    if time_diff < 3500:  # 1시간 미만이면 스킵
+                        return
+                
+                self._last_run_time = now
+                
+                # 모든 심볼에 대해 체크
+                for symbol in self.symbols:
+                    # 포지션 체크
+                    position = self.position_manager.get_position(symbol, self.strategy_name)
+                    
+                    if position and position.status == 'ACTIVE':
+                        # 기존 포지션 관리
+                        await self._manage_position(position)
+                    else:
+                        # 신규 진입 체크
+                        if await self.can_enter_position(symbol):
+                            await self._check_new_entry(symbol)
+            
+        except Exception as e:
+            logger.error(f"{self.strategy_name} run_cycle 실행 실패: {e}")
+            # 에러 발생해도 다음 사이클은 계속 실행
+    
     def get_strategy_status(self) -> Dict:
         """전략 상태 조회"""
         return {

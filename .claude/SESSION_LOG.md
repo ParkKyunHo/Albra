@@ -57,6 +57,10 @@
   - config/: config.yaml
   - .claude/: SESSION_LOG.md
 
+- 2025-07-02 04:00:19 KST: [843bcc5] fix: 멀티 계좌 모드 호환성 문제 완전 해결 - Telegram 봇, 대시보드, TFPE 전략
+  - src/: main_multi_account.py, dashboard.py
+  - .claude/: SESSION_LOG.md
+
 ### 다음 작업
 - [ ] 계속 진행
 
