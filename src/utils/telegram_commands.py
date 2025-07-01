@@ -30,6 +30,14 @@ except ImportError:
     PHASE2_FIX_AVAILABLE = False
     logger.warning("Phase2 Fix 헬퍼를 찾을 수 없습니다")
 
+# Position Formatter import 추가
+try:
+    from src.utils.position_formatter import PositionFormatter
+    POSITION_FORMATTER_AVAILABLE = True
+except ImportError:
+    POSITION_FORMATTER_AVAILABLE = False
+    logger.warning("Position Formatter를 찾을 수 없습니다")
+
 
 class CommandConfig:
     """명령어 설정 클래스"""
@@ -368,6 +376,20 @@ class TelegramCommands:
             # 현재가 조회
             current_price = await self.trading_system.binance_api.get_current_price(position.symbol)
             
+            # PositionFormatter 사용 (가능한 경우)
+            if POSITION_FORMATTER_AVAILABLE:
+                # unrealized_pnl 속성 추가
+                if current_price and position.entry_price:
+                    if position.side == 'LONG':
+                        pnl_percent = (current_price - position.entry_price) / position.entry_price * 100
+                    else:
+                        pnl_percent = (position.entry_price - current_price) / position.entry_price * 100
+                    pnl_percent *= position.leverage
+                    setattr(position, 'unrealized_pnl', pnl_percent)
+                
+                return PositionFormatter.format_telegram_position(position, current_price)
+            
+            # 기존 포맷팅 로직 (PositionFormatter가 없는 경우)
             # 손익 계산
             pnl_percent = 0
             if current_price and position.entry_price:
@@ -665,7 +687,36 @@ TFPE (Trend Following Pullback Entry) 전략으로
             await pos_msg.edit_text("📊 활성 포지션이 없습니다")
             return
         
-        # 포지션 정보 생성
+        # PositionFormatter 사용 가능한 경우 요약 뷰 사용
+        if POSITION_FORMATTER_AVAILABLE:
+            try:
+                # 현재가 조회 및 PnL 계산
+                for pos in positions:
+                    current_price = await self.trading_system.binance_api.get_current_price(pos.symbol)
+                    if current_price and pos.entry_price:
+                        if pos.side == 'LONG':
+                            pnl_percent = (current_price - pos.entry_price) / pos.entry_price * 100
+                        else:
+                            pnl_percent = (pos.entry_price - current_price) / pos.entry_price * 100
+                        pnl_percent *= pos.leverage
+                        setattr(pos, 'unrealized_pnl', pnl_percent)
+                
+                # 계좌 레이블 확인
+                account_label = None
+                if hasattr(self.trading_system, 'account_name'):
+                    account_label = self.trading_system.account_name
+                
+                # 요약 포맷 사용
+                summary = PositionFormatter.format_position_summary(positions, account_label)
+                message = f"🕒 업데이트: {datetime.now().strftime('%H:%M:%S')}\n\n{summary}"
+                
+                await pos_msg.edit_text(message, parse_mode='HTML')
+                return
+            except Exception as e:
+                logger.error(f"PositionFormatter 사용 실패: {e}")
+                # 기존 방식으로 대체
+        
+        # 기존 포지션 정보 생성 (PositionFormatter가 없는 경우)
         message_lines = [
             f"📊 <b>실시간 활성 포지션</b>",
             f"🕒 업데이트: {datetime.now().strftime('%H:%M:%S')}\n"

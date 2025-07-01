@@ -15,6 +15,12 @@
 - 2025-07-02 00:27:50 KST: [3cda7a2] feat: EC2 마이그레이션 완료 - 서울 리전(43.201.76.89)으로 이전
   - .claude/: SESSION_LOG.md
 
+- 2025-07-02 01:03:55 KST: [fad5198] fix: reconciliation engine 복합 키(symbol_strategy) 지원 추가
+  - src/: reconciliation_engine.py
+  - scripts/: backup_old_ec2.sh, albratrading-multi.service.ec2, albratrading-single.service.ec2
+  - .claude/: OLD_EC2_CLEANUP_REPORT.md, SESSION_LOG.md
+  - docs/: OLD_EC2_SHUTDOWN_GUIDE.md
+
 ### 다음 작업
 - [ ] 계속 진행
 
