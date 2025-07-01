@@ -150,7 +150,7 @@ async def process_signal(self, signal: TradingSignal) -> ExecutionResult:
 ##### 3.1 프로젝트 구조 완전 파악
 ```python
 # 1. 전체 디렉토리 구조 파악
-mcp__filesystem__directory_tree(path="/home/albra/AlbraTrading/src")
+mcp__filesystem__directory_tree(path="/home/albra/AlbraTrading")
 
 # 2. 관련 파일들의 연결 관계 파악
 - main.py vs main_multi_account.py의 구조적 차이

@@ -1022,8 +1022,36 @@ class MultiAccountTradingSystem:
                         f"<b>메모리 사용:</b> {metrics['memory_usage_mb']} MB\n"
                         f"<b>CPU 사용률:</b> {metrics['cpu_percent']}%\n"
                         f"<b>오류 횟수:</b> {metrics['errors']}\n"
-                        f"<b>경고 횟수:</b> {metrics['warnings']}"
+                        f"<b>경고 횟수:</b> {metrics['warnings']}\n\n"
+                        f"<b>🧠 전략 실행 상태:</b>\n"
                     )
+                    
+                    # 전략 정보 추가
+                    if self.strategies:
+                        for strategy in self.strategies:
+                            strategy_name = getattr(strategy, 'name', 'Unknown')
+                            account_name = getattr(strategy, 'account_name', 'N/A')
+                            is_running = getattr(strategy, 'is_running', False)
+                            status = "▶️ 실행중" if is_running else "⏸️ 정지"
+                            
+                            # 전략별 포지션 수 계산 (옵션)
+                            strategy_positions = 0
+                            if hasattr(self.unified_position_manager, 'get_positions_by_strategy'):
+                                positions = self.unified_position_manager.get_positions_by_strategy(strategy_name)
+                                strategy_positions = len([p for p in positions if p.status == 'ACTIVE'])
+                            
+                            message += f"• {strategy_name} ({account_name}): {status}"
+                            if strategy_positions > 0:
+                                message += f" - 포지션 {strategy_positions}개"
+                            message += "\n"
+                    else:
+                        message += "• 실행 중인 전략 없음\n"
+                    
+                    # 멀티 계좌 모드 정보
+                    if self.mode == OperationMode.MULTI:
+                        message += f"\n<b>💼 모드:</b> 멀티 계좌"
+                    else:
+                        message += f"\n<b>💼 모드:</b> 단일 계좌"
                     
                     await self.notification_manager.send_alert(
                         event_type="STATUS_REPORT",
