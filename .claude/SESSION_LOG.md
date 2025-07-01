@@ -84,8 +84,19 @@
   - src/: main_multi_account.py
   - .claude/: SESSION_LOG.md
 
+- 2025-07-02 05:09:03 KST: [5d274be] feat: 시스템 상태 리포트에 전략 실행 상태 정보 추가 - 1시간마다 전략별 상태 포함
+  - src/: main_multi_account.py
+  - .claude/: SESSION_LOG.md
+
+- 2025-07-02 05:30:00 KST: WSL 배포 시 종료/시작 알림 문제 해결
+  - src/main_multi_account.py: signal handler 추가 (SIGTERM, SIGINT 처리)
+  - src/main_multi_account.py: shutdown 메서드 개선 - 모든 종료 사유에 대해 알림 전송
+  - scripts/deploy_wsl.sh: graceful shutdown 로직 추가
+  - src/main_multi_account.py: run 메서드에 추가 시작 알림 구현
+  - CLAUDE.md: 수정사항 문서화
+
 ### 다음 작업
-- [ ] 계속 진행
+- [ ] 배포 테스트 및 알림 동작 확인
 
 ---
 

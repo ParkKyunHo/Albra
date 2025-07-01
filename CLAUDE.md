@@ -389,6 +389,13 @@ python3 scripts/update_project_status.py --commit
 
 ## 🚀 현재 작업 우선순위
 
+### 완료된 수정 사항 (2025-07-02)
+1. **WSL 배포 시 종료/시작 알림 문제 해결** ✓
+   - main_multi_account.py에 signal handler 추가 (SIGTERM, SIGINT 처리)
+   - shutdown 메서드 개선 - 모든 종료 사유에 대해 알림 전송
+   - deploy_wsl.sh에 graceful shutdown 로직 추가 (최대 10초 대기)
+   - run 메서드에 추가 시작 알림 구현
+
 ### 완료된 수정 사항 (2025-06-30)
 1. **Position Status Enum 오류 수정** ✓
    - `position_manager.py`의 `to_dict()` 메서드 개선

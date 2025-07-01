@@ -81,10 +81,51 @@ ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no -i "$SSH_KEY" ubuntu@$EC2_IP
 echo -e "${BLUE}[5/12] Backing up current deployment on EC2...${NC}"
 ssh -i "$SSH_KEY" ubuntu@$EC2_IP "if [ -d $REMOTE_DIR ]; then sudo cp -r $REMOTE_DIR/state $REMOTE_DIR/state.backup.\$(date +%Y%m%d_%H%M%S) 2>/dev/null || true; fi"
 
-# 서비스 중지
-echo -e "${BLUE}[6/12] Stopping existing services...${NC}"
+# 서비스 중지 (Graceful Shutdown)
+echo -e "${BLUE}[6/12] Stopping existing services gracefully...${NC}"
+
+# 현재 실행 중인 서비스 확인
+ACTIVE_SERVICE=$(ssh -i "$SSH_KEY" ubuntu@$EC2_IP "
+    if systemctl is-active --quiet albratrading-single; then
+        echo 'albratrading-single'
+    elif systemctl is-active --quiet albratrading-multi; then
+        echo 'albratrading-multi'
+    else
+        echo 'none'
+    fi
+")
+
+if [ "$ACTIVE_SERVICE" != "none" ]; then
+    echo "  - Active service detected: $ACTIVE_SERVICE"
+    echo "  - Sending SIGTERM for graceful shutdown..."
+    
+    # SIGTERM 전송 (graceful shutdown 트리거)
+    ssh -i "$SSH_KEY" ubuntu@$EC2_IP "sudo systemctl kill --signal=SIGTERM $ACTIVE_SERVICE"
+    
+    # Graceful shutdown 대기 (최대 10초)
+    echo "  - Waiting for graceful shutdown..."
+    for i in {1..10}; do
+        if ! ssh -i "$SSH_KEY" ubuntu@$EC2_IP "systemctl is-active --quiet $ACTIVE_SERVICE"; then
+            echo -e "  ${GREEN}✓ Service stopped gracefully${NC}"
+            break
+        fi
+        sleep 1
+    done
+    
+    # 여전히 실행 중이면 강제 종료
+    if ssh -i "$SSH_KEY" ubuntu@$EC2_IP "systemctl is-active --quiet $ACTIVE_SERVICE"; then
+        echo -e "  ${YELLOW}⚠ Force stopping service...${NC}"
+        ssh -i "$SSH_KEY" ubuntu@$EC2_IP "sudo systemctl stop $ACTIVE_SERVICE"
+    fi
+else
+    echo "  - No active services found"
+fi
+
+# 다른 서비스도 확실히 중지
 ssh -i "$SSH_KEY" ubuntu@$EC2_IP "sudo systemctl stop albratrading-single 2>/dev/null || true"
 ssh -i "$SSH_KEY" ubuntu@$EC2_IP "sudo systemctl stop albratrading-multi 2>/dev/null || true"
+
+# 잠시 대기
 sleep 2
 
 # 디렉토리 생성

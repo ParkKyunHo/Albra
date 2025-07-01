@@ -771,6 +771,31 @@ class MultiAccountTradingSystem:
             self.running = True
             self.is_running = True  # telegram_commands 호환성
             
+            # 시스템 시작 알림 (초기화 때 실패했을 경우를 대비)
+            if self.notification_manager and not self.dry_run:
+                try:
+                    # 활성 전략 정보 수집
+                    active_strategies = []
+                    for name, strategy in self.strategies_dict.items():
+                        if hasattr(strategy, 'is_running') and strategy.is_running:
+                            account_name = getattr(strategy, 'account_name', 'N/A')
+                            active_strategies.append(f"{name} ({account_name})")
+                    
+                    await self.notification_manager.send_alert(
+                        event_type="SYSTEM_STARTED",
+                        title="🏃 시스템 실행 시작",
+                        message=(
+                            f"<b>AlbraTrading 시스템이 시작되었습니다</b>\n\n"
+                            f"<b>운영 모드:</b> {'멀티 계좌' if self.mode == OperationMode.MULTI else '단일 계좌'}\n"
+                            f"<b>드라이런:</b> {'예' if self.dry_run else '아니오'}\n"
+                            f"<b>활성 전략:</b> {len(active_strategies)}개\n"
+                            f"{chr(10).join(['• ' + s for s in active_strategies]) if active_strategies else ''}"
+                        ),
+                        priority="HIGH"
+                    )
+                except Exception as e:
+                    logger.error(f"시작 알림 전송 실패: {e}")
+            
             # 메인 태스크들 시작
             main_tasks = []
             
@@ -1175,12 +1200,35 @@ class MultiAccountTradingSystem:
             if self.multi_account_manager:
                 await self.multi_account_manager.cleanup()
             
-            # 6. 종료 알림
-            if self.notification_manager and reason != ShutdownReason.NORMAL:
+            # 6. 종료 알림 (모든 경우에 전송)
+            if self.notification_manager:
+                # 종료 사유에 따른 메시지 구성
+                if reason == ShutdownReason.NORMAL:
+                    title = "✅ 시스템 정상 종료"
+                    emoji = "✅"
+                elif reason == ShutdownReason.SIGNAL:
+                    title = "🛑 시스템 종료 (시그널)"
+                    emoji = "🛑"
+                elif reason == ShutdownReason.ERROR:
+                    title = "❌ 시스템 오류 종료"
+                    emoji = "❌"
+                elif reason == ShutdownReason.EMERGENCY:
+                    title = "🚨 긴급 시스템 종료"
+                    emoji = "🚨"
+                else:
+                    title = "🛑 시스템 종료"
+                    emoji = "🛑"
+                
                 await self.notification_manager.send_alert(
                     event_type="SYSTEM_SHUTDOWN",
-                    title="🛑 시스템 종료",
-                    message=f"<b>종료 사유:</b> {reason.value}\n<b>실행 시간:</b> {self.metrics.to_dict()['uptime_hours']}시간",
+                    title=title,
+                    message=(
+                        f"{emoji} <b>AlbraTrading 시스템 종료</b>\n\n"
+                        f"<b>종료 사유:</b> {reason.value}\n"
+                        f"<b>운영 모드:</b> {'멀티 계좌' if self.mode == OperationMode.MULTI else '단일 계좌'}\n"
+                        f"<b>실행 시간:</b> {self.metrics.to_dict()['uptime_hours']}시간\n"
+                        f"<b>활성 포지션:</b> {len(self.unified_position_manager.get_active_positions()) if self.unified_position_manager else 0}개"
+                    ),
                     force=True
                 )
             
@@ -1294,6 +1342,20 @@ async def main():
         dry_run=args.dry_run,
         target_account=args.account
     )
+    
+    # 시그널 핸들러 설정
+    def signal_handler(signum, frame):
+        """시그널 핸들러"""
+        logger.info(f"종료 시그널 받음: {signum}")
+        # 이벤트 루프가 실행 중인 경우에만 태스크 생성
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            loop.create_task(trading_system.shutdown(ShutdownReason.SIGNAL))
+    
+    # SIGINT와 SIGTERM 시그널 핸들러 등록
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    logger.info("시그널 핸들러 등록 완료")
     
     try:
         # 시스템 초기화
