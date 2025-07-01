@@ -3,8 +3,8 @@ echo ====================================
 echo   Remote Debugging Script
 echo ====================================
 
-set EC2_IP=3.39.88.164
-set SSH_KEY=%USERPROFILE%\.ssh\trading-bot-key
+set EC2_IP=54.88.60.48
+set SSH_KEY=%USERPROFILE%\.ssh\trading-bot2
 
 echo.
 echo [1] Checking Python environment...
