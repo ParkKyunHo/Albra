@@ -95,6 +95,11 @@
   - src/main_multi_account.py: run 메서드에 추가 시작 알림 구현
   - CLAUDE.md: 수정사항 문서화
 
+- 2025-07-02 05:23:24 KST: [07ef2d1] fix: WSL 배포 시 종료/시작 알림 문제 해결
+  - src/: main_multi_account.py
+  - scripts/: deploy_wsl.sh
+  - .claude/: SESSION_LOG.md
+
 ### 다음 작업
 - [ ] 배포 테스트 및 알림 동작 확인
 

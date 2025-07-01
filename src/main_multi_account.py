@@ -790,8 +790,7 @@ class MultiAccountTradingSystem:
                             f"<b>드라이런:</b> {'예' if self.dry_run else '아니오'}\n"
                             f"<b>활성 전략:</b> {len(active_strategies)}개\n"
                             f"{chr(10).join(['• ' + s for s in active_strategies]) if active_strategies else ''}"
-                        ),
-                        priority="HIGH"
+                        )
                     )
                 except Exception as e:
                     logger.error(f"시작 알림 전송 실패: {e}")
@@ -997,8 +996,7 @@ class MultiAccountTradingSystem:
                     await self.notification_manager.send_alert(
                         event_type="STRATEGY_ERROR",
                         title=f"⚠️ {name} 전략 오류",
-                        message=str(e),
-                        priority="HIGH"
+                        message=str(e)
                     )
                 
                 await asyncio.sleep(60)  # 에러 시 1분 대기
@@ -1081,8 +1079,7 @@ class MultiAccountTradingSystem:
                     await self.notification_manager.send_alert(
                         event_type="STATUS_REPORT",
                         title="📊 시스템 상태 리포트",
-                        message=message,
-                        priority="LOW"
+                        message=message
                     )
                 
             except asyncio.CancelledError:
@@ -1126,8 +1123,7 @@ class MultiAccountTradingSystem:
                 await self.notification_manager.send_alert(
                     event_type="EMERGENCY",
                     title="🚨 긴급 상황",
-                    message=message,
-                    priority="CRITICAL"
+                    message=message
                 )
             elif self.telegram_notifier:
                 # 백업: 직접 텔레그램 전송
@@ -1153,7 +1149,8 @@ class MultiAccountTradingSystem:
             # 1. 신규 거래 중지
             logger.info("1. 신규 거래 중지")
             # 전략들에게 종료 신호 전송
-            for strategy in self.strategies.values():
+            # self.strategies는 list이므로 직접 반복
+            for strategy in self.strategies:
                 if hasattr(strategy, 'stop'):
                     await strategy.stop()
             
