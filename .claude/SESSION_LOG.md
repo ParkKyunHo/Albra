@@ -126,6 +126,9 @@
 - 2025-07-02 05:58:11 KST: [69a84f1] docs: 프로젝트 상태 문서 업데이트 - 2025-07-02 작업 내용 반영
   - .claude/: PROJECT_STATUS.md, SESSION_LOG.md
 
+- 2025-07-02 05:58:37 KST: [d41eec0] docs: SESSION_LOG 주요 성과 및 다음 작업 업데이트
+  - .claude/: SESSION_LOG.md
+
 ### 주요 성과
 1. ✅ WSL 배포 시 종료/시작 알림 시스템 완성
 2. ✅ 멀티 계좌 활성 계좌 카운팅 수정 (MASTER 계좌 포함)
@@ -136,6 +139,7 @@
 ### 다음 작업
 - [ ] POSITION_SYNC_ERROR (5분마다 발생) 해결
 - [ ] 멀티 전략 포지션 표시 UI/UX 개선
+- [ ] 텔레그램 /status 명령어 가동 시간 N/A 표시 문제 수정
 
 ---
 

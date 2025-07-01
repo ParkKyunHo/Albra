@@ -426,6 +426,11 @@ python3 scripts/update_project_status.py --commit
    - Sub1: BTCUSDT_ZLMACD_ICHIMOKU
    - UI/UX 개선 필요
 
+3. **텔레그램 /status 가동 시간 N/A 문제**
+   - 현상: /status 명령어 실행 시 "가동 시간: N/A" 표시
+   - 원인: 시스템 시작 시간 추적 누락
+   - 해결방안: SystemMetrics에 시작 시간 기록 필요
+
 ### 시스템 개선 사항
 1. **멀티 계좌/멀티 전략 안정성**
    - 복합 키 (`symbol_strategy`) 구조 최적화
