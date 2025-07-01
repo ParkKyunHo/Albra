@@ -542,6 +542,10 @@ class MultiAccountTradingSystem:
                 )
                 
                 if strategy:
+                    # 전략에 계좌 이름 설정 (telegram_commands 호환성)
+                    strategy.account_name = account_id
+                    strategy.account_id = account_id
+                    
                     # 계좌 ID를 포함한 키로 저장
                     strategy_key = f"{account_id}:{strategy_name}"
                     self.strategies_dict[strategy_key] = strategy
@@ -569,6 +573,10 @@ class MultiAccountTradingSystem:
                         )
                         
                         if tfpe_strategy:
+                            # 전략에 계좌 이름 설정 (telegram_commands 호환성)
+                            tfpe_strategy.account_name = 'MASTER'
+                            tfpe_strategy.account_id = 'MASTER'
+                            
                             # 마스터 계좌용 키로 저장
                             strategy_key = "MASTER:TFPE"
                             self.strategies_dict[strategy_key] = tfpe_strategy
