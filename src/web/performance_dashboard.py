@@ -8,11 +8,18 @@ import logging
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
 from flask import Blueprint, jsonify, request
-import pandas as pd
-import numpy as np
 from collections import defaultdict
 
 logger = logging.getLogger(__name__)
+
+# pandas와 numpy는 선택적 import
+try:
+    import pandas as pd
+    import numpy as np
+    PANDAS_AVAILABLE = True
+except ImportError:
+    PANDAS_AVAILABLE = False
+    logger.warning("pandas/numpy not available - some features will be limited")
 
 class PerformanceDashboard:
     """성과 분석 대시보드"""
@@ -338,58 +345,71 @@ class PerformanceDashboard:
         if not trades:
             return {'error': 'No trades found'}
         
-        # DataFrame 생성
-        df = pd.DataFrame([{
-            'date': t.exit_time.date(),
-            'pnl': t.pnl_pct,
-            'strategy': t.strategy_name
-        } for t in trades])
+        # pandas 없이 데이터 집계
+        period_data = defaultdict(lambda: {'sum': 0, 'count': 0, 'trades': []})
         
-        # 기간별 집계
-        if period == 'daily':
-            returns = df.groupby('date')['pnl'].agg(['sum', 'count', 'mean'])
-            period_label = 'Daily'
-        elif period == 'weekly':
-            df['week'] = pd.to_datetime(df['date']).dt.to_period('W')
-            returns = df.groupby('week')['pnl'].agg(['sum', 'count', 'mean'])
-            period_label = 'Weekly'
-        else:  # monthly
-            df['month'] = pd.to_datetime(df['date']).dt.to_period('M')
-            returns = df.groupby('month')['pnl'].agg(['sum', 'count', 'mean'])
-            period_label = 'Monthly'
+        for trade in trades:
+            if period == 'daily':
+                key = trade.exit_time.date().isoformat()
+            elif period == 'weekly':
+                # 주의 시작일 계산
+                week_start = trade.exit_time.date() - timedelta(days=trade.exit_time.weekday())
+                key = week_start.isoformat()
+            else:  # monthly
+                key = trade.exit_time.strftime('%Y-%m')
+            
+            period_data[key]['sum'] += trade.pnl_pct
+            period_data[key]['count'] += 1
+            period_data[key]['trades'].append(trade.pnl_pct)
         
-        # 누적 수익률 계산
-        returns['cumulative'] = returns['sum'].cumsum()
-        
-        # 결과 포맷팅
+        # 정렬 및 누적 계산
+        sorted_periods = sorted(period_data.keys())
         returns_data = []
-        for idx, row in returns.iterrows():
+        cumulative = 0
+        
+        for period_key in sorted_periods:
+            data = period_data[period_key]
+            cumulative += data['sum']
+            avg_return = data['sum'] / data['count'] if data['count'] > 0 else 0
+            
             returns_data.append({
-                'period': str(idx),
-                'return': round(row['sum'], 2),
-                'trades': int(row['count']),
-                'avg_return': round(row['mean'], 2),
-                'cumulative': round(row['cumulative'], 2)
+                'period': period_key,
+                'return': round(data['sum'], 2),
+                'trades': data['count'],
+                'avg_return': round(avg_return, 2),
+                'cumulative': round(cumulative, 2)
             })
         
-        # 통계 계산
-        returns_series = returns['sum']
+        # 통계 계산 (pandas 없이)
+        all_returns = [data['return'] for data in returns_data]
+        total_return = sum(all_returns)
+        avg_return = total_return / len(all_returns) if all_returns else 0
+        
+        # 표준편차 계산
+        if len(all_returns) > 1:
+            variance = sum((x - avg_return) ** 2 for x in all_returns) / (len(all_returns) - 1)
+            std_dev = variance ** 0.5
+        else:
+            std_dev = 0
+        
+        # Sharpe ratio (연율화)
+        sharpe_ratio = (avg_return / std_dev * (252 ** 0.5)) if std_dev > 0 else 0
+        
         statistics = {
-            'total_return': round(returns_series.sum(), 2),
-            'avg_return': round(returns_series.mean(), 2),
-            'std_dev': round(returns_series.std(), 2),
-            'sharpe_ratio': round(returns_series.mean() / returns_series.std() * np.sqrt(252) 
-                                if returns_series.std() > 0 else 0, 2),
-            'best_period': round(returns_series.max(), 2),
-            'worst_period': round(returns_series.min(), 2),
-            'positive_periods': int((returns_series > 0).sum()),
-            'negative_periods': int((returns_series < 0).sum()),
-            'win_rate': round((returns_series > 0).sum() / len(returns_series) * 100 
-                            if len(returns_series) > 0 else 0, 2)
+            'total_return': round(total_return, 2),
+            'avg_return': round(avg_return, 2),
+            'std_dev': round(std_dev, 2),
+            'sharpe_ratio': round(sharpe_ratio, 2),
+            'best_period': round(max(all_returns), 2) if all_returns else 0,
+            'worst_period': round(min(all_returns), 2) if all_returns else 0,
+            'positive_periods': sum(1 for r in all_returns if r > 0),
+            'negative_periods': sum(1 for r in all_returns if r < 0),
+            'win_rate': round(sum(1 for r in all_returns if r > 0) / len(all_returns) * 100 
+                            if all_returns else 0, 2)
         }
         
         return {
-            'period': period_label,
+            'period': period.capitalize(),
             'strategy': strategy or 'All',
             'returns': returns_data[-30:],  # 최근 30개 기간
             'statistics': statistics,
@@ -490,9 +510,9 @@ class PerformanceDashboard:
             'cumulative_returns': cumulative_returns[-100:],  # 최근 100개 거래
             'statistics': {
                 'total_periods': len(dd_periods),
-                'avg_duration': round(np.mean([p['duration_trades'] for p in dd_periods]) 
+                'avg_duration': round(sum(p['duration_trades'] for p in dd_periods) / len(dd_periods) 
                                     if dd_periods else 0, 1),
-                'avg_drawdown': round(np.mean([p['max_drawdown'] for p in dd_periods]) 
+                'avg_drawdown': round(sum(p['max_drawdown'] for p in dd_periods) / len(dd_periods) 
                                     if dd_periods else 0, 2),
                 'worst_drawdown': round(min([p['max_drawdown'] for p in dd_periods]) 
                                       if dd_periods else 0, 2),

@@ -30,6 +30,11 @@
   - src/: main_multi_account.py, dashboard.py, performance_dashboard.py
   - .claude/: SESSION_LOG.md, settings.local.json
 
+- 2025-07-02 01:58:51 KST: [be0ccdd] fix: 성과 대시보드 빈 데이터 처리 개선
+  - src/: dashboard.py, performance_dashboard.py
+  - scripts/: dashboard_tunnel.bat, test_performance_api.py
+  - .claude/: SESSION_LOG.md
+
 ### 다음 작업
 - [ ] 계속 진행
 
