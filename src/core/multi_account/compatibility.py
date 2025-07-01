@@ -275,6 +275,20 @@ class UnifiedBinanceAPI:
         # 기본값: 마스터 계좌
         return 'MASTER'
     
+    @property
+    def is_multi_account(self) -> bool:
+        """멀티 계좌 모드 여부 - 대시보드 호환성을 위해"""
+        return self.is_multi_mode
+    
+    @property
+    def account_apis(self) -> Dict[str, BinanceAPI]:
+        """계좌별 API 클라이언트 - 대시보드 호환성을 위해"""
+        if self.is_multi_mode and self.multi_manager:
+            return self.multi_manager.api_clients
+        else:
+            # 단일 모드에서는 빈 딕셔너리 반환
+            return {}
+    
     async def get_server_time(self) -> Optional[int]:
         """서버 시간 조회"""
         if self.is_multi_mode:

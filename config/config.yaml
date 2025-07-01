@@ -452,7 +452,7 @@ strategies:
 
   # ZL MACD + Ichimoku 전략 (비트코인 1시간봉 특화) - turtle_trading_strategy.py와 완전 동일
   zlmacd_ichimoku:
-    enabled: false  # 초기에는 비활성화, 테스트 후 활성화
+    enabled: true  # 초기에는 비활성화, 테스트 후 활성화
     leverage: 8     # 백테스트 검증: 8x (TFPE의 10x보다 보수적)
     position_size: 24  # 기본 포지션 크기 24% (Kelly로 동적 조정됨, 실제는 5-20%)
     

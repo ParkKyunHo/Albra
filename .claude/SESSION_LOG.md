@@ -48,6 +48,10 @@
   - src/: main_multi_account.py, dashboard.py
   - .claude/: SESSION_LOG.md
 
+- 2025-07-02 03:20:31 KST: [652bb1e] fix: 웹 대시보드 개선 - 멀티 계좌 잔고 표시, 전략명 Unknown 문제 해결, 성과 분석 페이지 홈 버튼 추가
+  - src/: dashboard.py, dashboard.html, performance.html
+  - .claude/: SESSION_LOG.md
+
 ### 다음 작업
 - [ ] 계속 진행
 
