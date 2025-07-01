@@ -46,6 +46,7 @@ from src.core.mdd_manager_improved import ImprovedMDDManager
 from src.strategies.strategy_factory import get_strategy_factory
 from src.strategies.strategy_config import StrategyConfigManager
 from src.web.dashboard import DashboardApp
+from src.analysis.performance_tracker import PerformanceTracker
 
 # Phase 2 imports
 from src.core.multi_account.account_manager import MultiAccountManager
@@ -164,6 +165,9 @@ class MultiAccountTradingSystem:
         
         # 웹 대시보드
         self.dashboard: Optional[DashboardApp] = None
+        
+        # 성과 추적
+        self.performance_tracker: Optional[PerformanceTracker] = None
         
         # 태스크 관리
         self.tasks: List[asyncio.Task] = []
@@ -420,6 +424,12 @@ class MultiAccountTradingSystem:
             )
             logger.info("✓ MDD Manager 초기화 완료")
             
+            # 5. Performance Tracker
+            self.performance_tracker = PerformanceTracker(
+                data_dir=self.config_manager.config.get('performance', {}).get('data_dir', 'data/performance')
+            )
+            logger.info("✓ Performance Tracker 초기화 완료")
+            
         except Exception as e:
             logger.error(f"모니터링 컴포넌트 초기화 실패: {e}")
             raise
@@ -524,6 +534,13 @@ class MultiAccountTradingSystem:
                 self.dashboard.binance_api = self.unified_api
                 self.dashboard.strategies = self.strategies
                 self.dashboard.config = self.config_manager.config
+                self.dashboard.state_manager = self.state_manager
+                
+                # 성과 대시보드 설정 (PerformanceTracker가 있을 경우)
+                if hasattr(self, 'performance_tracker') and self.performance_tracker:
+                    self.dashboard.setup_performance_dashboard(self.performance_tracker)
+                    logger.info("✓ 성과 대시보드 초기화 완료")
+                
                 logger.info("✓ 웹 대시보드 초기화 완료")
             
         except Exception as e:

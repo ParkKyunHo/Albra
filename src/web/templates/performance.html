@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AlbraTrading - 성과 분석 대시보드</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.30.0/index.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #0b0e11;
+            color: #eaecef;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background-color: #1e2329;
+            padding: 20px 0;
+            margin-bottom: 30px;
+            border-bottom: 1px solid #2d3748;
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
+        
+        h1 {
+            font-size: 28px;
+            font-weight: 600;
+            color: #f0b90b;
+        }
+        
+        .nav-tabs {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #2d3748;
+            padding: 0 20px;
+        }
+        
+        .nav-tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            color: #848e9c;
+            font-weight: 500;
+        }
+        
+        .nav-tab:hover {
+            color: #eaecef;
+        }
+        
+        .nav-tab.active {
+            color: #f0b90b;
+            border-bottom-color: #f0b90b;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .grid-full {
+            grid-column: 1 / -1;
+        }
+        
+        .card {
+            background-color: #1e2329;
+            border-radius: 8px;
+            padding: 24px;
+            border: 1px solid #2d3748;
+        }
+        
+        .card h2 {
+            font-size: 20px;
+            margin-bottom: 20px;
+            color: #f0b90b;
+        }
+        
+        .card h3 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #848e9c;
+        }
+        
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+        }
+        
+        .stat-item {
+            background-color: #2d3748;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #848e9c;
+            text-transform: uppercase;
+        }
+        
+        .positive {
+            color: #0ecb81;
+        }
+        
+        .negative {
+            color: #f6465d;
+        }
+        
+        .neutral {
+            color: #f0b90b;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #2d3748;
+        }
+        
+        th {
+            background-color: #2d3748;
+            font-weight: 600;
+            color: #f0b90b;
+        }
+        
+        tr:hover {
+            background-color: rgba(45, 55, 72, 0.5);
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 20px;
+        }
+        
+        .strategy-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-right: 8px;
+        }
+        
+        .strategy-tfpe {
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        .strategy-zlmacd {
+            background-color: #2196F3;
+            color: white;
+        }
+        
+        .strategy-momentum {
+            background-color: #FF9800;
+            color: white;
+        }
+        
+        .period-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .period-btn {
+            padding: 8px 16px;
+            background-color: #2d3748;
+            border: none;
+            border-radius: 4px;
+            color: #eaecef;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .period-btn:hover {
+            background-color: #3d4758;
+        }
+        
+        .period-btn.active {
+            background-color: #f0b90b;
+            color: #0b0e11;
+        }
+        
+        .trade-row.win {
+            border-left: 3px solid #0ecb81;
+        }
+        
+        .trade-row.loss {
+            border-left: 3px solid #f6465d;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #848e9c;
+        }
+        
+        .error {
+            background-color: rgba(246, 70, 93, 0.1);
+            border: 1px solid #f6465d;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        
+        .info-box {
+            background-color: rgba(240, 185, 11, 0.1);
+            border: 1px solid #f0b90b;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        
+        .refresh-btn {
+            padding: 8px 16px;
+            background-color: #f0b90b;
+            color: #0b0e11;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .refresh-btn:hover {
+            background-color: #d4a00a;
+        }
+        
+        .metric-comparison {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .metric-bar {
+            flex: 1;
+            height: 8px;
+            background-color: #2d3748;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .metric-fill {
+            height: 100%;
+            background-color: #f0b90b;
+            transition: width 0.3s ease;
+        }
+        
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stat-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .nav-tabs {
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>📊 AlbraTrading 성과 분석</h1>
+            <button class="refresh-btn" onclick="refreshData()">새로고침</button>
+        </div>
+    </header>
+    
+    <div class="container">
+        <nav class="nav-tabs">
+            <div class="nav-tab active" data-tab="overview">전체 개요</div>
+            <div class="nav-tab" data-tab="comparison">전략 비교</div>
+            <div class="nav-tab" data-tab="returns">수익률 분석</div>
+            <div class="nav-tab" data-tab="drawdown">MDD 분석</div>
+            <div class="nav-tab" data-tab="trades">거래 내역</div>
+        </nav>
+        
+        <div id="overview-tab" class="tab-content">
+            <div class="grid">
+                <div class="card grid-full">
+                    <h2>전체 성과 요약</h2>
+                    <div id="overall-stats" class="stat-grid">
+                        <div class="loading">데이터 로딩 중...</div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h2>전략별 성과</h2>
+                    <div id="strategy-summary">
+                        <div class="loading">데이터 로딩 중...</div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h2>최근 성과 추이</h2>
+                    <div class="chart-container">
+                        <canvas id="performance-trend-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="comparison-tab" class="tab-content" style="display:none;">
+            <div class="grid">
+                <div class="card grid-full">
+                    <h2>전략 성과 비교</h2>
+                    <div id="strategy-comparison">
+                        <div class="loading">데이터 로딩 중...</div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h2>승률 비교</h2>
+                    <div class="chart-container">
+                        <canvas id="winrate-chart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h2>수익성 비교</h2>
+                    <div class="chart-container">
+                        <canvas id="profitability-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="returns-tab" class="tab-content" style="display:none;">
+            <div class="grid">
+                <div class="card grid-full">
+                    <h2>수익률 분석</h2>
+                    <div class="period-selector">
+                        <button class="period-btn active" data-period="daily">일별</button>
+                        <button class="period-btn" data-period="weekly">주별</button>
+                        <button class="period-btn" data-period="monthly">월별</button>
+                    </div>
+                    <div class="chart-container" style="height: 400px;">
+                        <canvas id="returns-chart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h2>수익률 통계</h2>
+                    <div id="returns-stats">
+                        <div class="loading">데이터 로딩 중...</div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h2>누적 수익률</h2>
+                    <div class="chart-container">
+                        <canvas id="cumulative-returns-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="drawdown-tab" class="tab-content" style="display:none;">
+            <div class="grid">
+                <div class="card grid-full">
+                    <h2>최대 낙폭 (MDD) 분석</h2>
+                    <div class="chart-container" style="height: 400px;">
+                        <canvas id="drawdown-chart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h2>MDD 통계</h2>
+                    <div id="drawdown-stats">
+                        <div class="loading">데이터 로딩 중...</div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h2>DD 기간 분석</h2>
+                    <div id="drawdown-periods">
+                        <div class="loading">데이터 로딩 중...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="trades-tab" class="tab-content" style="display:none;">
+            <div class="grid">
+                <div class="card grid-full">
+                    <h2>최근 거래 내역</h2>
+                    <div class="period-selector">
+                        <button class="period-btn active" data-days="7">7일</button>
+                        <button class="period-btn" data-days="30">30일</button>
+                        <button class="period-btn" data-days="90">90일</button>
+                    </div>
+                    <div id="trades-summary" style="margin-bottom: 20px;">
+                        <div class="loading">데이터 로딩 중...</div>
+                    </div>
+                    <div id="trades-table">
+                        <div class="loading">데이터 로딩 중...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 전역 변수
+        let charts = {};
+        let currentTab = 'overview';
+        let currentPeriod = 'daily';
+        let currentDays = 7;
+        
+        // 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeTabs();
+            initializePeriodSelectors();
+            loadOverviewData();
+        });
+        
+        // 탭 초기화
+        function initializeTabs() {
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const tabName = this.dataset.tab;
+                    switchTab(tabName);
+                });
+            });
+        }
+        
+        // 기간 선택기 초기화
+        function initializePeriodSelectors() {
+            // Returns 탭 기간 선택
+            document.querySelectorAll('#returns-tab .period-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('#returns-tab .period-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    currentPeriod = this.dataset.period;
+                    loadReturnsData();
+                });
+            });
+            
+            // Trades 탭 기간 선택
+            document.querySelectorAll('#trades-tab .period-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('#trades-tab .period-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    currentDays = parseInt(this.dataset.days);
+                    loadTradesData();
+                });
+            });
+        }
+        
+        // 탭 전환
+        function switchTab(tabName) {
+            // 탭 버튼 업데이트
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+                if (tab.dataset.tab === tabName) {
+                    tab.classList.add('active');
+                }
+            });
+            
+            // 컨텐츠 업데이트
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.style.display = 'none';
+            });
+            document.getElementById(`${tabName}-tab`).style.display = 'block';
+            
+            currentTab = tabName;
+            
+            // 탭별 데이터 로드
+            switch(tabName) {
+                case 'overview':
+                    loadOverviewData();
+                    break;
+                case 'comparison':
+                    loadComparisonData();
+                    break;
+                case 'returns':
+                    loadReturnsData();
+                    break;
+                case 'drawdown':
+                    loadDrawdownData();
+                    break;
+                case 'trades':
+                    loadTradesData();
+                    break;
+            }
+        }
+        
+        // 데이터 새로고침
+        function refreshData() {
+            switch(currentTab) {
+                case 'overview':
+                    loadOverviewData();
+                    break;
+                case 'comparison':
+                    loadComparisonData();
+                    break;
+                case 'returns':
+                    loadReturnsData();
+                    break;
+                case 'drawdown':
+                    loadDrawdownData();
+                    break;
+                case 'trades':
+                    loadTradesData();
+                    break;
+            }
+        }
+        
+        // 전체 개요 데이터 로드
+        async function loadOverviewData() {
+            try {
+                const response = await fetch('/api/performance/overview');
+                const data = await response.json();
+                
+                if (data.error) {
+                    showError('overall-stats', data.error);
+                    return;
+                }
+                
+                // 전체 통계 표시
+                displayOverallStats(data.overall);
+                
+                // 전략별 요약 표시
+                displayStrategySummary(data.strategies);
+                
+                // 성과 추이 차트
+                // TODO: 실제 시계열 데이터가 필요
+                
+            } catch (error) {
+                showError('overall-stats', '데이터 로드 실패: ' + error.message);
+            }
+        }
+        
+        // 전체 통계 표시
+        function displayOverallStats(stats) {
+            const html = `
+                <div class="stat-item">
+                    <div class="stat-value">${stats.total_trades || 0}</div>
+                    <div class="stat-label">총 거래 수</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value ${stats.total_pnl >= 0 ? 'positive' : 'negative'}">
+                        ${stats.total_pnl || 0}%
+                    </div>
+                    <div class="stat-label">총 수익률</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${stats.win_rate || 0}%</div>
+                    <div class="stat-label">승률</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${stats.total_strategies || 0}</div>
+                    <div class="stat-label">활성 전략</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${stats.active_days || 0}</div>
+                    <div class="stat-label">운영 일수</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value neutral">${stats.best_strategy || 'N/A'}</div>
+                    <div class="stat-label">최고 전략</div>
+                </div>
+            `;
+            document.getElementById('overall-stats').innerHTML = html;
+        }
+        
+        // 전략별 요약 표시
+        function displayStrategySummary(strategies) {
+            if (!strategies || strategies.length === 0) {
+                document.getElementById('strategy-summary').innerHTML = '<p>전략 데이터 없음</p>';
+                return;
+            }
+            
+            let html = '<table><thead><tr>';
+            html += '<th>전략</th><th>거래</th><th>승률</th><th>PF</th><th>수익률</th><th>MDD</th>';
+            html += '</tr></thead><tbody>';
+            
+            strategies.forEach(strategy => {
+                const badgeClass = getStrategyBadgeClass(strategy.name);
+                html += `<tr>
+                    <td><span class="strategy-badge ${badgeClass}">${strategy.name}</span></td>
+                    <td>${strategy.total_trades}</td>
+                    <td>${strategy.win_rate}%</td>
+                    <td>${strategy.profit_factor}</td>
+                    <td class="${strategy.total_pnl_pct >= 0 ? 'positive' : 'negative'}">
+                        ${strategy.total_pnl_pct}%
+                    </td>
+                    <td class="negative">${strategy.max_drawdown}%</td>
+                </tr>`;
+            });
+            
+            html += '</tbody></table>';
+            document.getElementById('strategy-summary').innerHTML = html;
+        }
+        
+        // 전략 비교 데이터 로드
+        async function loadComparisonData() {
+            try {
+                const response = await fetch('/api/performance/comparison');
+                const data = await response.json();
+                
+                if (data.error) {
+                    showError('strategy-comparison', data.error);
+                    return;
+                }
+                
+                displayStrategyComparison(data);
+                createWinRateChart(data.strategies);
+                createProfitabilityChart(data.strategies);
+                
+            } catch (error) {
+                showError('strategy-comparison', '데이터 로드 실패: ' + error.message);
+            }
+        }
+        
+        // 전략 비교 표시
+        function displayStrategyComparison(data) {
+            let html = '<div style="margin-bottom: 30px;">';
+            
+            // 메트릭별 랭킹
+            for (const [metric, rankings] of Object.entries(data.rankings)) {
+                html += `<h3>${getMetricLabel(metric)} Top 5</h3>`;
+                html += '<div style="margin-bottom: 20px;">';
+                
+                rankings.forEach(item => {
+                    const maxValue = rankings[0].value;
+                    const percentage = (item.value / maxValue) * 100;
+                    
+                    html += `
+                        <div class="metric-comparison" style="margin-bottom: 10px;">
+                            <span style="width: 150px;">${item.rank}. ${item.strategy}</span>
+                            <div class="metric-bar">
+                                <div class="metric-fill" style="width: ${percentage}%"></div>
+                            </div>
+                            <span style="width: 80px; text-align: right;">${item.value}</span>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+            }
+            
+            html += '</div>';
+            document.getElementById('strategy-comparison').innerHTML = html;
+        }
+        
+        // 승률 차트 생성
+        function createWinRateChart(strategies) {
+            const ctx = document.getElementById('winrate-chart').getContext('2d');
+            
+            if (charts.winrate) {
+                charts.winrate.destroy();
+            }
+            
+            charts.winrate = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: strategies.map(s => s.strategy),
+                    datasets: [{
+                        label: '승률 (%)',
+                        data: strategies.map(s => s.metrics.win_rate),
+                        backgroundColor: '#0ecb81',
+                        borderColor: '#0ecb81',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 수익성 차트 생성
+        function createProfitabilityChart(strategies) {
+            const ctx = document.getElementById('profitability-chart').getContext('2d');
+            
+            if (charts.profitability) {
+                charts.profitability.destroy();
+            }
+            
+            charts.profitability = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['승률', 'PF', 'Sharpe', 'Kelly', '일관성'],
+                    datasets: strategies.map((s, idx) => ({
+                        label: s.strategy,
+                        data: [
+                            s.metrics.win_rate,
+                            Math.min(s.metrics.profit_factor * 20, 100), // 정규화
+                            Math.min(s.metrics.sharpe_ratio * 20, 100), // 정규화
+                            s.metrics.kelly_fraction,
+                            s.metrics.consistency
+                        ],
+                        borderColor: getChartColor(idx),
+                        backgroundColor: getChartColor(idx, 0.2),
+                        pointBackgroundColor: getChartColor(idx),
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: getChartColor(idx)
+                    }))
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 수익률 데이터 로드
+        async function loadReturnsData() {
+            try {
+                const response = await fetch(`/api/performance/returns?period=${currentPeriod}`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    showError('returns-stats', data.error);
+                    return;
+                }
+                
+                displayReturnsStats(data.statistics);
+                createReturnsChart(data.returns);
+                createCumulativeReturnsChart(data.returns);
+                
+            } catch (error) {
+                showError('returns-stats', '데이터 로드 실패: ' + error.message);
+            }
+        }
+        
+        // 수익률 통계 표시
+        function displayReturnsStats(stats) {
+            const html = `
+                <div class="stat-grid">
+                    <div class="stat-item">
+                        <div class="stat-value ${stats.total_return >= 0 ? 'positive' : 'negative'}">
+                            ${stats.total_return}%
+                        </div>
+                        <div class="stat-label">총 수익률</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${stats.avg_return}%</div>
+                        <div class="stat-label">평균 수익률</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${stats.sharpe_ratio}</div>
+                        <div class="stat-label">샤프 비율</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${stats.win_rate}%</div>
+                        <div class="stat-label">양수 기간</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value positive">${stats.best_period}%</div>
+                        <div class="stat-label">최고 수익</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value negative">${stats.worst_period}%</div>
+                        <div class="stat-label">최대 손실</div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('returns-stats').innerHTML = html;
+        }
+        
+        // 수익률 차트 생성
+        function createReturnsChart(returns) {
+            const ctx = document.getElementById('returns-chart').getContext('2d');
+            
+            if (charts.returns) {
+                charts.returns.destroy();
+            }
+            
+            const colors = returns.map(r => r.return >= 0 ? '#0ecb81' : '#f6465d');
+            
+            charts.returns = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: returns.map(r => r.period),
+                    datasets: [{
+                        label: '수익률 (%)',
+                        data: returns.map(r => r.return),
+                        backgroundColor: colors,
+                        borderColor: colors,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 누적 수익률 차트 생성
+        function createCumulativeReturnsChart(returns) {
+            const ctx = document.getElementById('cumulative-returns-chart').getContext('2d');
+            
+            if (charts.cumulative) {
+                charts.cumulative.destroy();
+            }
+            
+            charts.cumulative = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: returns.map(r => r.period),
+                    datasets: [{
+                        label: '누적 수익률 (%)',
+                        data: returns.map(r => r.cumulative),
+                        borderColor: '#f0b90b',
+                        backgroundColor: 'rgba(240, 185, 11, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // MDD 데이터 로드
+        async function loadDrawdownData() {
+            try {
+                const response = await fetch('/api/performance/drawdown');
+                const data = await response.json();
+                
+                if (data.error) {
+                    showError('drawdown-stats', data.error);
+                    return;
+                }
+                
+                displayDrawdownStats(data);
+                createDrawdownChart(data.cumulative_returns);
+                displayDrawdownPeriods(data.drawdown_periods);
+                
+            } catch (error) {
+                showError('drawdown-stats', '데이터 로드 실패: ' + error.message);
+            }
+        }
+        
+        // MDD 통계 표시
+        function displayDrawdownStats(data) {
+            const stats = data.statistics;
+            const html = `
+                <div class="stat-grid">
+                    <div class="stat-item">
+                        <div class="stat-value negative">${data.current_drawdown}%</div>
+                        <div class="stat-label">현재 DD</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value negative">${data.max_drawdown}%</div>
+                        <div class="stat-label">최대 DD</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${stats.total_periods}</div>
+                        <div class="stat-label">DD 기간 수</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${stats.avg_duration}</div>
+                        <div class="stat-label">평균 지속</div>
+                    </div>
+                </div>
+                ${stats.current_underwater ? 
+                    `<div class="info-box">⚠️ 현재 DD 진행 중 (${stats.underwater_duration}거래)</div>` : 
+                    '<div class="info-box">✅ 현재 신고점 갱신 중</div>'
+                }
+            `;
+            document.getElementById('drawdown-stats').innerHTML = html;
+        }
+        
+        // MDD 차트 생성
+        function createDrawdownChart(returns) {
+            const ctx = document.getElementById('drawdown-chart').getContext('2d');
+            
+            if (charts.drawdown) {
+                charts.drawdown.destroy();
+            }
+            
+            // 누적 수익률과 DD 계산
+            const cumulativeData = returns.map(r => r.cumulative_return);
+            const drawdownData = [];
+            let peak = 0;
+            
+            cumulativeData.forEach(value => {
+                if (value > peak) peak = value;
+                const dd = peak > 0 ? ((value - peak) / (100 + peak) * 100) : 0;
+                drawdownData.push(dd);
+            });
+            
+            charts.drawdown = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: returns.map(r => r.date),
+                    datasets: [
+                        {
+                            label: '누적 수익률 (%)',
+                            data: cumulativeData,
+                            borderColor: '#0ecb81',
+                            backgroundColor: 'rgba(14, 203, 129, 0.1)',
+                            borderWidth: 2,
+                            fill: false,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Drawdown (%)',
+                            data: drawdownData,
+                            borderColor: '#f6465d',
+                            backgroundColor: 'rgba(246, 70, 93, 0.3)',
+                            borderWidth: 2,
+                            fill: true,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            max: 0,
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // DD 기간 표시
+        function displayDrawdownPeriods(periods) {
+            if (!periods || periods.length === 0) {
+                document.getElementById('drawdown-periods').innerHTML = '<p>DD 기간 데이터 없음</p>';
+                return;
+            }
+            
+            let html = '<table><thead><tr>';
+            html += '<th>시작</th><th>종료</th><th>지속</th><th>최대 DD</th><th>회복 수익</th>';
+            html += '</tr></thead><tbody>';
+            
+            periods.forEach(period => {
+                html += `<tr>
+                    <td>${formatDate(period.start)}</td>
+                    <td>${formatDate(period.end)}</td>
+                    <td>${period.duration_trades} 거래</td>
+                    <td class="negative">${period.max_drawdown}%</td>
+                    <td class="positive">+${period.recovery_return}%</td>
+                </tr>`;
+            });
+            
+            html += '</tbody></table>';
+            document.getElementById('drawdown-periods').innerHTML = html;
+        }
+        
+        // 거래 내역 로드
+        async function loadTradesData() {
+            try {
+                const response = await fetch(`/api/performance/trades?days=${currentDays}&limit=100`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    showError('trades-table', data.error);
+                    return;
+                }
+                
+                displayTradesSummary(data.summary);
+                displayTradesTable(data.trades);
+                
+            } catch (error) {
+                showError('trades-table', '데이터 로드 실패: ' + error.message);
+            }
+        }
+        
+        // 거래 요약 표시
+        function displayTradesSummary(summary) {
+            const html = `
+                <div class="stat-grid">
+                    <div class="stat-item">
+                        <div class="stat-value">${summary.total_trades}</div>
+                        <div class="stat-label">총 거래</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value positive">${summary.wins}</div>
+                        <div class="stat-label">승리</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value negative">${summary.losses}</div>
+                        <div class="stat-label">패배</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${summary.win_rate}%</div>
+                        <div class="stat-label">승률</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value ${summary.total_pnl >= 0 ? 'positive' : 'negative'}">
+                            ${summary.total_pnl}%
+                        </div>
+                        <div class="stat-label">총 수익률</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${summary.avg_pnl}%</div>
+                        <div class="stat-label">평균 수익률</div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('trades-summary').innerHTML = html;
+        }
+        
+        // 거래 테이블 표시
+        function displayTradesTable(trades) {
+            if (!trades || trades.length === 0) {
+                document.getElementById('trades-table').innerHTML = '<p>거래 내역이 없습니다.</p>';
+                return;
+            }
+            
+            let html = '<table><thead><tr>';
+            html += '<th>시간</th><th>전략</th><th>심볼</th><th>방향</th><th>진입가</th><th>청산가</th><th>수익률</th><th>사유</th>';
+            html += '</tr></thead><tbody>';
+            
+            trades.forEach(trade => {
+                const badgeClass = getStrategyBadgeClass(trade.strategy);
+                const rowClass = trade.result === 'WIN' ? 'win' : 'loss';
+                
+                html += `<tr class="trade-row ${rowClass}">
+                    <td>${formatDateTime(trade.exit_time)}</td>
+                    <td><span class="strategy-badge ${badgeClass}">${trade.strategy}</span></td>
+                    <td>${trade.symbol}</td>
+                    <td>${trade.side}</td>
+                    <td>$${trade.entry_price}</td>
+                    <td>$${trade.exit_price}</td>
+                    <td class="${trade.pnl_pct >= 0 ? 'positive' : 'negative'}">
+                        ${trade.pnl_pct}%
+                    </td>
+                    <td>${trade.reason}</td>
+                </tr>`;
+            });
+            
+            html += '</tbody></table>';
+            document.getElementById('trades-table').innerHTML = html;
+        }
+        
+        // 유틸리티 함수들
+        function showError(elementId, message) {
+            document.getElementById(elementId).innerHTML = 
+                `<div class="error">오류: ${message}</div>`;
+        }
+        
+        function getStrategyBadgeClass(strategyName) {
+            const name = strategyName.toLowerCase();
+            if (name.includes('tfpe')) return 'strategy-tfpe';
+            if (name.includes('zlmacd')) return 'strategy-zlmacd';
+            if (name.includes('momentum')) return 'strategy-momentum';
+            return '';
+        }
+        
+        function getChartColor(index, alpha = 1) {
+            const colors = [
+                `rgba(76, 175, 80, ${alpha})`,   // Green
+                `rgba(33, 150, 243, ${alpha})`,  // Blue
+                `rgba(255, 152, 0, ${alpha})`,   // Orange
+                `rgba(156, 39, 176, ${alpha})`,  // Purple
+                `rgba(255, 193, 7, ${alpha})`    // Amber
+            ];
+            return colors[index % colors.length];
+        }
+        
+        function getMetricLabel(metric) {
+            const labels = {
+                'win_rate': '승률',
+                'profit_factor': 'Profit Factor',
+                'total_pnl': '총 수익률',
+                'sharpe_ratio': 'Sharpe Ratio',
+                'consistency': '일관성 지수'
+            };
+            return labels[metric] || metric;
+        }
+        
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('ko-KR');
+        }
+        
+        function formatDateTime(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleString('ko-KR', {
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+        
+        // Chart.js 기본 설정
+        Chart.defaults.color = '#eaecef';
+        Chart.defaults.borderColor = '#2d3748';
+        Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    </script>
+</body>
+</html>

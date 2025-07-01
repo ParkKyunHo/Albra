@@ -12,6 +12,7 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import functools
 import os
+from src.web.performance_dashboard import PerformanceDashboard
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,7 @@ class DashboardApp:
         self.binance_api = None  # exchange 대신 binance_api 사용
         self.state_manager = None
         self.notification_manager = None
+        self.performance_tracker = None  # 성과 추적기 추가
         
         # 메트릭 저장
         self.metrics = {
@@ -58,6 +60,9 @@ class DashboardApp:
         # 비동기 실행을 위한 스레드 풀
         self.executor = ThreadPoolExecutor(max_workers=4)
         
+        # 성과 대시보드 초기화
+        self.performance_dashboard = None
+        
         # 라우트 설정
         self._setup_routes()
         
@@ -76,6 +81,17 @@ class DashboardApp:
                 return render_template('dashboard.html')
             except:
                 return self._get_default_html()
+        
+        @self.app.route('/performance')
+        def performance():
+            """성과 분석 대시보드 페이지"""
+            self.metrics['requests_count'] += 1
+            
+            try:
+                return render_template('performance.html')
+            except Exception as e:
+                logger.error(f"Performance template 오류: {e}")
+                return f"<h1>Performance Dashboard</h1><p>Error: {e}</p>"
         
         @self.app.route('/api/status')
         def api_status():
@@ -612,6 +628,26 @@ class DashboardApp:
             return None
         finally:
             loop.close()
+    
+    def setup_performance_dashboard(self, performance_tracker=None):
+        """성과 대시보드 설정"""
+        if not performance_tracker and not self.performance_tracker:
+            logger.warning("Performance tracker가 없어 성과 대시보드를 설정할 수 없습니다")
+            return
+        
+        if performance_tracker:
+            self.performance_tracker = performance_tracker
+        
+        # PerformanceDashboard 인스턴스 생성
+        self.performance_dashboard = PerformanceDashboard(
+            performance_tracker=self.performance_tracker,
+            state_manager=self.state_manager
+        )
+        
+        # Blueprint 등록
+        self.app.register_blueprint(self.performance_dashboard.blueprint)
+        
+        logger.info("Performance Dashboard가 성공적으로 설정되었습니다")
     
     def _get_default_html(self) -> str:
         """기본 HTML 템플릿"""

@@ -39,6 +39,20 @@
             gap: 10px;
         }
         
+        .nav-link {
+            background-color: #f0b90b;
+            color: #0b0e11;
+            padding: 8px 16px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-link:hover {
+            background-color: #d4a00a;
+        }
+        
         .status-badge {
             background-color: #0ecb81;
             color: #0b0e11;
@@ -371,6 +385,7 @@
                     <span class="real-time-indicator">실시간</span>
                 </h1>
                 <div class="control-buttons">
+                    <a href="/performance" class="nav-link">📊 성과 분석</a>
                     <button class="refresh-btn" id="refreshBtn" onclick="refreshData()">새로고침</button>
                     <button class="sync-btn" id="syncBtn" onclick="forceSync()">즉시 동기화</button>
                 </div>

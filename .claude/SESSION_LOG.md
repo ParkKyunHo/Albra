@@ -21,6 +21,11 @@
   - .claude/: OLD_EC2_CLEANUP_REPORT.md, SESSION_LOG.md
   - docs/: OLD_EC2_SHUTDOWN_GUIDE.md
 
+- 2025-07-02 01:24:04 KST: [7b19309] feat: 멀티 전략 포지션 표시 개선 - PositionFormatter 통합
+  - src/: position_key_manager.py, position_formatter.py, telegram_commands.py
+  - scripts/: check_position_migration.py
+  - .claude/: SESSION_LOG.md
+
 ### 다음 작업
 - [ ] 계속 진행
 

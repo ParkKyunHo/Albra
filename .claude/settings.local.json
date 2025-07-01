@@ -12,7 +12,8 @@
       "Bash(cp:*)",
       "Bash(chmod:*)",
       "mcp__filesystem__write_file",
-      "Bash(scp:*)"
+      "Bash(scp:*)",
+      "Bash(grep:*)"
     ],
     "deny": []
   }
