@@ -12,6 +12,10 @@
   - .claude/: SESSION_LOG.md
   - docs/: DEPLOYMENT_GUIDE.md, EC2_STABILITY_GUIDE.md
 
+- 2025-07-03 00:49:40 KST: [843238d] fix: 파이썬 버전 불일치 문제 해결 및 배포 스크립트 개선
+  - scripts/: deploy_wsl.sh
+  - .claude/: SESSION_LOG.md
+
 ### 다음 작업
 - [ ] 계속 진행
 
