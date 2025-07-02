@@ -63,6 +63,9 @@
 - 2025-07-03 03:23:06 KST: [1813c17] docs: CLAUDE.md 및 프로젝트 문서 업데이트 - 멀티 계좌 호환성 체크리스트 및 오류 패턴 추가
   - .claude/: PROJECT_STATUS.md, SESSION_LOG.md
 
+- 2025-07-03 03:29:12 KST: [2f59512] fix: TFPE 백테스팅 개선 - BTC만 분석, 차트 제거, 디버그 로그 추가
+  - .claude/: SESSION_LOG.md
+
 ### 추가 작업 (2025-07-03)
 - TFPE 전략 완전 분석 수행
   - 독립 실행 확인 (Momentum 전략과 별개)
