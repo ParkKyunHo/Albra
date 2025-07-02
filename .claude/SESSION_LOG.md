@@ -20,6 +20,12 @@
   - scripts/: albratrading-multi.service.ec2, albratrading-single.service.ec2
   - .claude/: SESSION_LOG.md
 
+- 2025-07-03 01:08:24 KST: [9b5feab] fix: EC2 IP 주소 변경 (43.201.76.89 → 43.200.179.200)
+  - scripts/: check_ec2_status.sh, dashboard_tunnel.bat, deploy_wsl.sh
+  - config/: deployment.yaml
+  - .claude/: SESSION_LOG.md
+  - docs/: DEPLOYMENT_GUIDE.md, ELASTIC_IP_GUIDE.md
+
 ### 다음 작업
 - [ ] 계속 진행
 

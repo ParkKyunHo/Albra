@@ -202,9 +202,9 @@ if [ -f "$HOME/.python-version" ]; then
     REQUIRED_VERSION=$(cat "$HOME/.python-version")
     echo "Creating venv with Python $REMOTE_PYTHON_VERSION (required: $REQUIRED_VERSION)"
 fi
-ssh -i "$SSH_KEY" ubuntu@$EC2_IP "cd $REMOTE_DIR && rm -rf venv && python3 -m venv venv"
+ssh -i "$SSH_KEY" ubuntu@$EC2_IP "cd $REMOTE_DIR && rm -rf venv && python3.10 -m venv venv"
 ssh -i "$SSH_KEY" ubuntu@$EC2_IP "cd $REMOTE_DIR && source venv/bin/activate && pip install --upgrade pip"
-ssh -i "$SSH_KEY" ubuntu@$EC2_IP "cd $REMOTE_DIR && source venv/bin/activate && pip install -r requirements.txt --upgrade"
+ssh -i "$SSH_KEY" ubuntu@$EC2_IP "cd $REMOTE_DIR && source venv/bin/activate && pip install -r requirements.txt --upgrade --no-cache-dir --prefer-binary"
 
 # 사전 배포 검사
 echo -e "${BLUE}[12/12] Running pre-deployment checks...${NC}"
