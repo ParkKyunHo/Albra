@@ -1773,10 +1773,22 @@ TFPE (Trend Following Pullback Entry) 전략으로
         
         args = context.args
         if not args:
-            await update.message.reply_text(
-                "사용법: /strategy_status [전략명]\n"
-                "예: /strategy_status TFPE"
-            )
+            # 현재 실행 중인 전략 목록 수집
+            active_strategies = []
+            for strategy in self.trading_system.strategies:
+                strategy_name = getattr(strategy, 'name', getattr(strategy, 'strategy_name', 'Unknown'))
+                active_strategies.append(strategy_name)
+            
+            # 사용법 메시지
+            usage_msg = "사용법: /strategy_status [전략명]\n"
+            usage_msg += "예: /strategy_status TFPE\n"
+            
+            if active_strategies:
+                usage_msg += "\n<b>실행 중인 전략:</b>\n"
+                for name in active_strategies:
+                    usage_msg += f"• {name}\n"
+            
+            await update.message.reply_text(usage_msg, parse_mode='HTML')
             return
         
         strategy_name = args[0].upper()
@@ -1785,7 +1797,14 @@ TFPE (Trend Following Pullback Entry) 전략으로
             # 전략 찾기
             target_strategy = None
             for strategy in self.trading_system.strategies:
-                if getattr(strategy, 'name', '').upper() == strategy_name:
+                strategy_display_name = getattr(strategy, 'name', '').upper()
+                strategy_internal_name = getattr(strategy, 'strategy_name', '').upper()
+                
+                # 부분 일치, strategy_name 속성, 정확한 일치 모두 확인
+                if (strategy_display_name.startswith(strategy_name) or 
+                    strategy_internal_name == strategy_name or
+                    strategy_internal_name.startswith(strategy_name) or
+                    strategy_display_name == strategy_name):
                     target_strategy = strategy
                     break
             
