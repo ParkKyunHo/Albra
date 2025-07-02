@@ -215,6 +215,32 @@ mcp__sequential-thinking__sequentialthinking(
 4. 해결: MultiAccountTradingSystem에 self.config 추가
 ```
 
+### 자주 발생하는 오류 패턴
+
+#### 1. 속성 누락 오류
+**문제**: `'MultiAccountTradingSystem' object has no attribute 'config'`
+**원인**: main.py와 main_multi_account.py의 구조적 차이
+**해결**: 
+- compatibility.py에서 래핑
+- 또는 해당 클래스에 직접 속성 추가
+
+#### 2. API 인터페이스 불일치
+**문제**: `TypeError: fetch_data() takes from 1 to 4 positional arguments but 5 were given`
+**원인**: 모듈의 API 시그니처 미확인
+**해결**:
+- 먼저 해당 모듈의 메서드 시그니처 확인
+- 필요시 래퍼 함수 작성
+
+#### 3. 텔레그램 명령어 매칭 실패
+**문제**: `/strategy_status TFPE` 명령어가 전략을 찾지 못함
+**원인**: 정확한 문자열 매칭만 지원
+**해결**: 부분 매칭 로직 추가
+
+#### 4. 전략 이름 불일치
+**문제**: 전략이 활성화되지 않거나 찾을 수 없음
+**원인**: strategy_name과 name 속성의 불일치
+**해결**: 전략 클래스에서 일관된 이름 사용
+
 ### 코드 표준
 
 #### 1. Type Safety (Jane Street 스타일)
@@ -320,6 +346,24 @@ logger.info("position_opened",
 2. 통합 테스트: `python tests/test_system_integration.py`
 3. Dry run 모드: `--dry-run` 플래그 사용
 4. Critical paths: 100% 테스트 커버리지 필수
+
+### 멀티 계좌 호환성 체크리스트
+main.py와 main_multi_account.py 간 호환성 유지를 위한 필수 체크 사항:
+
+#### 1. 속성 확인
+- `self.config` - ConfigManager의 config 속성 접근
+- `self.account_name` - 계좌 이름 (MASTER, sub1 등)
+- `self.strategies` - 전략 리스트 (dict가 아닌 list)
+- `self.exchange` - BinanceAPI 인스턴스 참조
+
+#### 2. 메서드 호환성
+- `get_account_info()` - 계좌 정보 반환
+- `cleanup()` 또는 `close()` - 정리 메서드
+- 텔레그램 명령어 핸들러 파라미터 일치
+
+#### 3. 구조적 차이 해결
+- UnifiedPositionManager 사용 시 account_name 주입
+- compatibility.py에서 누락된 속성/메서드 래핑
 
 ## 📝 작업 시 주의사항
 
