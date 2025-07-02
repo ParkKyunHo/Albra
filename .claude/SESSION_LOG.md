@@ -41,6 +41,11 @@
   - .claude/: SESSION_LOG.md
   - docs/: PYTHON_VERSION_GUIDE.md
 
+- 2025-07-03 01:39:59 KST: [c577068] feat: Python 버전 충돌 방지 시스템 구축
+  - scripts/: check_python_version.sh
+  - .claude/: SESSION_LOG.md
+  - docs/: PYTHON_CONFLICT_RESOLUTION.md
+
 ### 다음 작업
 - [ ] 계속 진행
 

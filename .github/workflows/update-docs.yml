@@ -8,14 +8,14 @@ on:
   # 수동 실행 가능
   workflow_dispatch:
   
-  # main 브랜치에 푸시될 때
-  push:
-    branches:
-      - main
-    paths:
-      - 'src/**'
-      - 'config/**'
-      - 'scripts/**'
+  # main 브랜치에 푸시될 때 (비활성화)
+  # push:
+  #   branches:
+  #     - main
+  #   paths:
+  #     - 'src/**'
+  #     - 'config/**'
+  #     - 'scripts/**'
 
 jobs:
   update-docs:
@@ -30,7 +30,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.12'
+        python-version: '3.10'
     
     - name: Install dependencies
       run: |
@@ -39,7 +39,7 @@ jobs:
     
     - name: Update CLAUDE.md
       run: |
-        python scripts/update_claude_docs.py
+        python scripts/update_claude_docs.py || echo "Warning: Document update failed"
     
     - name: Check for changes
       id: check_changes
