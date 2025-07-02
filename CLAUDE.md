@@ -548,7 +548,7 @@ python3 scripts/update_project_status.py --commit
   실시간 로그:     sudo journalctl -u albratrading-multi -f
   모드 전환:       ./setup_systemd_multi.sh switch
 
-  ssh -i "C:\Users\박균호\.ssh\trading-bot4.pem" ubuntu@43.200.179.200
+  ssh -i "C:\Users\박균호\.ssh\trading-bot4.pem" ubuntu@13.209.157.171
 cd /home/ubuntu/AlbraTrading
 source venv/bin/activate
 

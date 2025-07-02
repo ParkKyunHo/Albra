@@ -12,7 +12,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # 설정
-EC2_IP="43.200.179.200"
+EC2_IP="13.209.157.171"
 SSH_KEY="$HOME/.ssh/trading-bot4"
 LOCAL_DIR="/home/albra/AlbraTrading"
 REMOTE_DIR="/home/ubuntu/AlbraTrading"

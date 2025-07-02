@@ -26,6 +26,10 @@
   - .claude/: SESSION_LOG.md
   - docs/: DEPLOYMENT_GUIDE.md, ELASTIC_IP_GUIDE.md
 
+- 2025-07-03 01:19:38 KST: [bab4679] fix: Python 버전 및 메모리 문제 해결
+  - scripts/: deploy_wsl.sh
+  - .claude/: SESSION_LOG.md
+
 ### 다음 작업
 - [ ] 계속 진행
 

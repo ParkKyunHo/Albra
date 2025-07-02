@@ -9,4 +9,4 @@ echo.
 echo 종료하려면 Ctrl+C를 누르세요.
 echo.
 
-ssh -i C:\Users\박균호\.ssh\trading-bot4 -L 5000:localhost:5000 ubuntu@43.200.179.200 -N
+ssh -i C:\Users\박균호\.ssh\trading-bot4 -L 5000:localhost:5000 ubuntu@13.209.157.171 -N

@@ -4,7 +4,7 @@
 
 ### 현재 상황
 - **이전 EC2 인스턴스**: 54.88.60.48 (us-east-1 리전)
-- **현재 EC2 인스턴스**: 43.200.179.200 (ap-northeast-2 서울)
+- **현재 EC2 인스턴스**: 13.209.157.171 (ap-northeast-2 서울) [Elastic IP]
 - **문제**: `Service unavailable from a restricted location` 에러
 - **원인**: 미국 리전에서 바이낸스 API 접속 차단
 
@@ -33,10 +33,10 @@
 ### SSH 접속 명령
 ```bash
 # WSL에서
-ssh -i ~/.ssh/trading-bot4 ubuntu@43.200.179.200
+ssh -i ~/.ssh/trading-bot4 ubuntu@13.209.157.171
 
 # Windows에서 (키 복사 필요)
-ssh -i C:\Users\박균호\.ssh\trading-bot4 ubuntu@43.200.179.200
+ssh -i C:\Users\박균호\.ssh\trading-bot4 ubuntu@13.209.157.171
 ```
 
 ### 서비스 관리

@@ -30,7 +30,8 @@ Elastic IP 할당 후 새로운 고정 IP로 모든 설정 파일 업데이트:
 # 예시: 새 Elastic IP가 13.125.XXX.XXX인 경우
 # WSL에서 실행
 cd /home/albra/AlbraTrading
-find . -type f \( -name "*.sh" -o -name "*.bat" -o -name "*.yaml" -o -name "*.md" \) -exec grep -l "43.200.179.200" {} \; | xargs sed -i 's/43.200.179.200/13.125.XXX.XXX/g'
+# 예시: Elastic IP가 13.209.157.171인 경우
+find . -type f \( -name "*.sh" -o -name "*.bat" -o -name "*.yaml" -o -name "*.md" \) -exec grep -l "이전IP" {} \; | xargs sed -i 's/이전IP/13.209.157.171/g'
 ```
 
 ## 💰 비용 고려사항

@@ -9,7 +9,7 @@ echo "   시간: $(date '+%Y-%m-%d %H:%M:%S KST')"
 echo "=============================================="
 
 # 설정
-EC2_IP="43.200.179.200"
+EC2_IP="13.209.157.171"
 SSH_KEY="$HOME/.ssh/trading-bot4"
 SSH_USER="ubuntu"
 
