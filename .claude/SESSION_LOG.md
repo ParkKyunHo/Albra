@@ -60,6 +60,9 @@
 - 2025-07-03 03:20:57 KST: [a86e58c] feat: TFPE 전략 전진분석 백테스팅 구현 (2021 Q1 - 2025 Q2)
   - .claude/: SESSION_LOG.md
 
+- 2025-07-03 03:23:06 KST: [1813c17] docs: CLAUDE.md 및 프로젝트 문서 업데이트 - 멀티 계좌 호환성 체크리스트 및 오류 패턴 추가
+  - .claude/: PROJECT_STATUS.md, SESSION_LOG.md
+
 ### 추가 작업 (2025-07-03)
 - TFPE 전략 완전 분석 수행
   - 독립 실행 확인 (Momentum 전략과 별개)

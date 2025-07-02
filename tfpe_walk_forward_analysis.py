@@ -231,6 +231,19 @@ class TFPEDonchianStrategy:
         df['swing_high'] = df['high'].rolling(self.swing_period).max()
         df['swing_low'] = df['low'].rolling(self.swing_period).min()
         
+        # NaN 값 처리
+        df = df.ffill().bfill()
+        
+        # 볼륨 비율 NaN 처리 (0으로 나누어지는 경우)
+        df['volume_ratio'] = df['volume_ratio'].fillna(1.0)
+        
+        # 디버그 정보 출력
+        print(f"\n  지표 계산 완료:")
+        print(f"    - 데이터 개수: {len(df)}")
+        print(f"    - NaN 개수: {df.isna().sum().sum()}")
+        print(f"    - ADX 평균: {df['adx'].mean():.2f}")
+        print(f"    - Volume Ratio 평균: {df['volume_ratio'].mean():.2f}")
+        
         return df
     
     def check_entry_conditions(self, df: pd.DataFrame, i: int) -> Tuple[bool, str]:
@@ -322,6 +335,7 @@ class TFPEDonchianStrategy:
                     direction = 'short'
         
         if signal_strength >= self.signal_threshold and direction:
+            print(f"\n  ✅ 진입 신호 확정: 시간={df.iloc[i]['timestamp']}, 가격=${current['close']:.2f}, 방향={direction}")
             return True, direction
         
         return False, None
@@ -442,6 +456,8 @@ class TFPEDonchianStrategy:
         self.partial_exit_3_done = False
         self.trailing_stop_active = False
         self.trailing_stop_price = None
+        
+        print(f"  💰 포지션 진입: {signal.upper()} @ ${effective_price:.2f}, 크기: {self.position['size']:.4f}, SL: ${stop_loss:.2f}, TP: ${take_profit:.2f}")
     
     def close_position(self, df: pd.DataFrame, i: int, reason: str):
         """포지션 청산"""
@@ -494,6 +510,8 @@ class TFPEDonchianStrategy:
         
         self.position = None
         self.last_trade_result = 'win' if pnl > 0 else 'loss'
+        
+        print(f"  💵 포지션 청산: {self.position['type'].upper()} @ ${effective_exit_price:.2f}, PnL: ${pnl:.2f} ({pnl/self.position['value']*100:.2f}%), 이유: {reason}")
     
     def update_position(self, df: pd.DataFrame, i: int):
         """포지션 업데이트 (부분 익절, 트레일링 스톱 등)"""
@@ -596,10 +614,16 @@ class TFPEDonchianStrategy:
     
     def run_backtest(self, df: pd.DataFrame) -> Dict:
         """백테스트 실행"""
+        print(f"\n  📊 백테스트 시작: {self.symbol}")
+        print(f"    - 초기 자본: ${self.initial_capital}")
+        print(f"    - 데이터 범위: {df.iloc[0]['timestamp']} ~ {df.iloc[-1]['timestamp']}")
+        
         # 지표 계산
         df = self.calculate_indicators(df)
         
         # 백테스트 실행
+        entry_signals = 0
+        trades_executed = 0
         for i in range(len(df)):
             # 자산 기록
             self.equity_curve.append({
@@ -622,11 +646,19 @@ class TFPEDonchianStrategy:
                 # 진입 체크
                 should_enter, direction = self.check_entry_conditions(df, i)
                 if should_enter:
+                    entry_signals += 1
                     self.execute_trade(df, i, direction)
+                    trades_executed += 1
         
         # 마지막 포지션 청산
         if self.position:
             self.close_position(df, len(df) - 1, "End of backtest")
+        
+        print(f"\n  📦 백테스트 결과:")
+        print(f"    - 진입 신호: {entry_signals}개")
+        print(f"    - 실행된 거래: {trades_executed}개")
+        print(f"    - 최종 자본: ${self.capital:.2f}")
+        print(f"    - 거래 횟수: {len(self.trades)}개")
         
         return self.calculate_metrics()
     
@@ -772,11 +804,13 @@ class WalkForwardAnalysis:
             # 최적화 기간 백테스트 (파라미터 검증용)
             opt_strategy = self.strategy_class(timeframe=self.timeframe, symbol=symbol)
             opt_df = df.iloc[opt_start:opt_end].copy()
+            print(f"    Optimization data: {len(opt_df)} candles")
             opt_metrics = opt_strategy.run_backtest(opt_df)
             
             # 테스트 기간 백테스트
             test_strategy = self.strategy_class(timeframe=self.timeframe, symbol=symbol)
             test_df = df.iloc[test_start:test_end].copy()
+            print(f"    Test data: {len(test_df)} candles")
             test_metrics = test_strategy.run_backtest(test_df)
             
             # 결과 저장
@@ -978,8 +1012,8 @@ class WalkForwardAnalysis:
         # 결과 분석
         summary = self.analyze_results(all_results)
         
-        # 결과 시각화
-        self.plot_results(all_results)
+        # 차트 생성 제거 (사용자 요청)
+        # self.plot_results(all_results)
         
         # 결과 저장
         output_file = 'tfpe_walk_forward_results.json'
@@ -1006,8 +1040,8 @@ class WalkForwardAnalysis:
 
 def main():
     """메인 실행 함수"""
-    # 분석할 심볼 목록
-    symbols = ['BTC/USDT', 'ETH/USDT', 'BNB/USDT', 'SOL/USDT', 'XRP/USDT']
+    # 분석할 심볼 목록 - 비트코인만 분석
+    symbols = ['BTC/USDT']
     
     # Walk-Forward Analysis 실행
     wf = WalkForwardAnalysis(TFPEDonchianStrategy, symbols, timeframe='4h')
