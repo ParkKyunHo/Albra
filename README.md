@@ -25,7 +25,8 @@ AlbraTrading은 1인 사용자를 위한 바이낸스 자동 트레이딩 시스
 
 ### 현재 운영 환경
 - **서버**: AWS EC2 (Ubuntu 22.04 LTS)
-- **Python**: 3.12 (venv 가상환경)
+- **Elastic IP**: 13.209.157.171 (고정 IP)
+- **Python**: 3.10.18 (venv 가상환경)
 - **실행 방식**: systemd 서비스 (단일/멀티 모드 선택 가능)
 - **운영 모드**: 단일 계좌 모드 또는 멀티 계좌 모드
 
@@ -105,13 +106,24 @@ git clone [repository-url] AlbraTrading
 cd AlbraTrading
 ```
 
-#### 가상환경 설정
+#### Python 3.10 확인 및 가상환경 설정
 ```bash
-# 가상환경 생성
+# Python 3.10 확인 (필수)
+python --version  # 3.10.x여야 함
+
+# Python 버전이 다른 경우 pyenv 사용 권장
+# pyenv install 3.10.12
+# pyenv local 3.10.12
+
+# 가상환경 생성 (Python 3.10 사용)
 python -m venv venv
 
 # 가상환경 활성화
-venv\Scripts\activate
+venv\Scripts\activate  # Windows
+source venv/bin/activate  # Linux/Mac/WSL
+
+# Python 버전 재확인
+python --version  # 3.10.x여야 함
 
 # 의존성 설치
 pip install -r requirements.txt

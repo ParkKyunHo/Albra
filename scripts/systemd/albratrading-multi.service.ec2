@@ -11,6 +11,8 @@ WorkingDirectory=/home/ubuntu/AlbraTrading
 Environment="PATH=/home/ubuntu/AlbraTrading/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 Environment="PYTHONPATH=/home/ubuntu/AlbraTrading"
 Environment="PYTHONUNBUFFERED=1"
+# Python 3.10 가상환경 명시
+Environment="VIRTUAL_ENV=/home/ubuntu/AlbraTrading/venv"
 
 # 멀티 계좌 모드 실행
 ExecStart=/home/ubuntu/AlbraTrading/venv/bin/python /home/ubuntu/AlbraTrading/src/main_multi_account.py

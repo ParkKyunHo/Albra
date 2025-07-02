@@ -26,7 +26,11 @@ AlbraTrading은 AWS EC2에서 24/7 운영되는 개인용 바이낸스 자동 �
 
 ### 현재 운영 상태
 - **서버**: AWS EC2 (Ubuntu 22.04 LTS)
-- **Python**: 3.10 (venv 가상환경)
+- **Elastic IP**: 13.209.157.171 (고정 IP)
+- **Python 환경**:
+  - **시스템 Python**: 3.12.3 (사용하지 않음)
+  - **프로젝트 Python**: 3.10.18 (가상환경)
+  - **가상환경 경로**: `/home/ubuntu/AlbraTrading/venv`
 - **운영 모드**: 멀티 계좌 모드 (Master + Sub1)
 - **활성 전략**: 
   - Master: TFPE (Trend Following with Price Extremes)
@@ -55,6 +59,21 @@ mkdir -p ~/.ssh
 chmod 700 ~/.ssh
 cp /mnt/c/Users/박균호/.ssh/trading-bot4.pem ~/.ssh/
 chmod 600 ~/.ssh/trading-bot4.pem
+```
+
+#### Python 3.10 환경 설정 (EC2)
+```bash
+# Python 3.10이 없는 경우 설치
+sudo apt update
+sudo apt install -y python3.10 python3.10-venv python3.10-dev
+
+# 가상환경 생성 (반드시 python3.10 사용)
+cd /home/ubuntu/AlbraTrading
+python3.10 -m venv venv
+
+# 가상환경 활성화 후 확인
+source venv/bin/activate
+python --version  # Python 3.10.18이 표시되어야 함
 ```
 
 #### 사용 방법

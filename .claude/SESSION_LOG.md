@@ -30,6 +30,12 @@
   - scripts/: deploy_wsl.sh
   - .claude/: SESSION_LOG.md
 
+- 2025-07-03 01:25:39 KST: [92b3f1c] feat: Elastic IP 설정 완료 (13.209.157.171)
+  - scripts/: check_ec2_status.sh, dashboard_tunnel.bat, deploy_wsl.sh
+  - config/: deployment.yaml
+  - .claude/: SESSION_LOG.md
+  - docs/: DEPLOYMENT_GUIDE.md, ELASTIC_IP_GUIDE.md
+
 ### 다음 작업
 - [ ] 계속 진행
 

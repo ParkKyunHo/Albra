@@ -18,13 +18,16 @@ ERRORS=0
 
 # 1. Python 버전 확인
 echo "🐍 Python Version Check:"
-PYTHON_VERSION=$(python3 --version 2>&1 | awk '{print $2}')
-REQUIRED_VERSION="3.10"
+# 시스템 Python 확인 (정보 제공용)
+SYSTEM_PYTHON_VERSION=$(python3 --version 2>&1 | awk '{print $2}')
+echo -e "ℹ${NC} System Python: $SYSTEM_PYTHON_VERSION"
 
-if [[ "$PYTHON_VERSION" == "$REQUIRED_VERSION"* ]]; then
-    echo -e "${GREEN}✓${NC} Python $PYTHON_VERSION (OK)"
+# Python 3.10 확인
+if command -v python3.10 &> /dev/null; then
+    PYTHON310_VERSION=$(python3.10 --version 2>&1 | awk '{print $2}')
+    echo -e "${GREEN}✓${NC} Python 3.10: $PYTHON310_VERSION (Required version found)"
 else
-    echo -e "${RED}✗${NC} Python $PYTHON_VERSION (Required: $REQUIRED_VERSION+)"
+    echo -e "${RED}✗${NC} Python 3.10 not found! Please install python3.10"
     ((ERRORS++))
 fi
 echo ""
