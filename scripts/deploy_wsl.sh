@@ -172,18 +172,46 @@ ssh -i "$SSH_KEY" ubuntu@$EC2_IP "sudo chown -R ubuntu:ubuntu $REMOTE_DIR/"
 # 로그 디렉토리 권한 명시적 설정
 ssh -i "$SSH_KEY" ubuntu@$EC2_IP "sudo chown -R ubuntu:ubuntu $REMOTE_DIR/logs/ 2>/dev/null || true"
 
+# Python 버전 확인
+echo -e "${BLUE}[10/12] Checking Python versions...${NC}"
+LOCAL_PYTHON_VERSION=$(python3 --version | cut -d' ' -f2)
+REMOTE_PYTHON_VERSION=$(ssh -i "$SSH_KEY" ubuntu@$EC2_IP "python3 --version" | cut -d' ' -f2)
+echo "Local Python: $LOCAL_PYTHON_VERSION"
+echo "EC2 Python: $REMOTE_PYTHON_VERSION"
+
+# 버전 불일치 경고
+LOCAL_MAJOR_MINOR=$(echo $LOCAL_PYTHON_VERSION | cut -d'.' -f1,2)
+REMOTE_MAJOR_MINOR=$(echo $REMOTE_PYTHON_VERSION | cut -d'.' -f1,2)
+if [ "$LOCAL_MAJOR_MINOR" != "$REMOTE_MAJOR_MINOR" ]; then
+    echo -e "${YELLOW}⚠️  Warning: Python version mismatch detected!${NC}"
+    echo -e "${YELLOW}   Local: Python $LOCAL_PYTHON_VERSION${NC}"
+    echo -e "${YELLOW}   EC2: Python $REMOTE_PYTHON_VERSION${NC}"
+    echo -e "${YELLOW}   This may cause package compatibility issues.${NC}"
+    echo
+    read -p "Continue anyway? (y/N): " CONTINUE
+    if [ "$CONTINUE" != "y" ] && [ "$CONTINUE" != "Y" ]; then
+        echo -e "${RED}Deployment cancelled.${NC}"
+        exit 1
+    fi
+fi
+
 # Python 환경 설정
-echo -e "${BLUE}[10/12] Setting up Python environment...${NC}"
-ssh -i "$SSH_KEY" ubuntu@$EC2_IP "cd $REMOTE_DIR && python3 -m venv venv || true"
+echo -e "${BLUE}[11/12] Setting up Python environment...${NC}"
+# venv가 이미 있으면 삭제하고 새로 생성 (호환성 보장)
+if [ -f "$HOME/.python-version" ]; then
+    REQUIRED_VERSION=$(cat "$HOME/.python-version")
+    echo "Creating venv with Python $REMOTE_PYTHON_VERSION (required: $REQUIRED_VERSION)"
+fi
+ssh -i "$SSH_KEY" ubuntu@$EC2_IP "cd $REMOTE_DIR && rm -rf venv && python3 -m venv venv"
 ssh -i "$SSH_KEY" ubuntu@$EC2_IP "cd $REMOTE_DIR && source venv/bin/activate && pip install --upgrade pip"
 ssh -i "$SSH_KEY" ubuntu@$EC2_IP "cd $REMOTE_DIR && source venv/bin/activate && pip install -r requirements.txt --upgrade"
 
 # 사전 배포 검사
-echo -e "${BLUE}[11/12] Running pre-deployment checks...${NC}"
+echo -e "${BLUE}[12/12] Running pre-deployment checks...${NC}"
 ssh -i "$SSH_KEY" ubuntu@$EC2_IP "cd $REMOTE_DIR && if [ -f scripts/pre_deploy_check.sh ]; then chmod +x scripts/pre_deploy_check.sh && ./scripts/pre_deploy_check.sh; fi"
 
 # 배포 모드 선택 및 서비스 시작
-echo -e "${BLUE}[12/12] Setting up and starting service...${NC}"
+echo -e "${BLUE}[13/13] Setting up and starting service...${NC}"
 echo
 echo "Select deployment mode:"
 echo "  1. Single Account Mode"

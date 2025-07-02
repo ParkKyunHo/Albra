@@ -2,6 +2,21 @@
 
 
 
+
+## 세션: 2025-07-03
+
+### 작업 요약
+
+- 2025-07-03 00:38:31 KST: [b05bf28] fix: 멀티 계좌 서비스가 올바른 main_multi_account.py를 실행하도록 수정 - 크래시 원인 해결
+  - scripts/: crash_prevention.py, setup_monitoring.sh, system_watchdog.py
+  - .claude/: SESSION_LOG.md
+  - docs/: DEPLOYMENT_GUIDE.md, EC2_STABILITY_GUIDE.md
+
+### 다음 작업
+- [ ] 계속 진행
+
+---
+
 ## 세션: 2025-07-02
 
 ### 작업 요약
