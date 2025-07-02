@@ -132,6 +132,11 @@
 - 2025-07-02 06:00:53 KST: [87cb461] docs: 다음 작업 예정에 텔레그램 /status 가동 시간 N/A 문제 추가
   - .claude/: PROJECT_STATUS.md, SESSION_LOG.md
 
+- 2025-07-02 09:46:32 KST: [acb1d22] fix: 크래시 루프 원인 제거 - 중복 시작 메시지 제거 및 가동 시간 표시 수정
+  - src/: account_manager.py, main_multi_account.py
+  - scripts/: albratrading-multi.service.ec2
+  - .claude/: SESSION_LOG.md
+
 ### 주요 성과
 1. ✅ WSL 배포 시 종료/시작 알림 시스템 완성
 2. ✅ 멀티 계좌 활성 계좌 카운팅 수정 (MASTER 계좌 포함)
