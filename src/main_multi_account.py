@@ -543,38 +543,38 @@ class MultiAccountTradingSystem:
                     self.strategies.append(strategy)  # 리스트에도 추가
                     logger.info(f"✓ [{account_id}] {strategy_name} 전략 초기화 완료")
             
-            # 마스터 계좌 전략도 초기화 (TFPE 전략)
+            # 마스터 계좌 전략도 초기화 (ZLMACD_ICHIMOKU 전략)
             if self.multi_account_manager.master_account:
                 master_api = self.multi_account_manager.api_clients.get('MASTER')
                 master_position_manager = self.multi_account_manager.position_managers.get('MASTER')
                 
                 if master_api and master_position_manager:
-                    # TFPE 전략 할당
-                    tfpe_config = self.config_manager.get_strategy_config('tfpe')
-                    if tfpe_config.get('enabled', False):
-                        logger.info("[MASTER] TFPE 전략 초기화")
+                    # ZLMACD_ICHIMOKU 전략 할당
+                    zlmacd_config = self.config_manager.get_strategy_config('zlmacd_ichimoku')
+                    if zlmacd_config.get('enabled', False):
+                        logger.info("[MASTER] ZLMACD_ICHIMOKU 전략 초기화")
                         
                         # 전략 인스턴스 생성
                         strategy_factory = get_strategy_factory()
-                        tfpe_strategy = strategy_factory.create_strategy(
-                            name='tfpe',
+                        zlmacd_strategy = strategy_factory.create_strategy(
+                            name='zlmacd_ichimoku',
                             binance_api=master_api,
                             position_manager=master_position_manager,
-                            custom_config=tfpe_config
+                            custom_config=zlmacd_config
                         )
                         
-                        if tfpe_strategy:
+                        if zlmacd_strategy:
                             # 전략에 계좌 이름 설정 (telegram_commands 호환성)
-                            tfpe_strategy.account_name = 'MASTER'
-                            tfpe_strategy.account_id = 'MASTER'
+                            zlmacd_strategy.account_name = 'MASTER'
+                            zlmacd_strategy.account_id = 'MASTER'
                             
                             # 마스터 계좌용 키로 저장
-                            strategy_key = "MASTER:TFPE"
-                            self.strategies_dict[strategy_key] = tfpe_strategy
-                            self.strategies.append(tfpe_strategy)  # 리스트에도 추가
-                            logger.info("✓ [MASTER] TFPE 전략 초기화 완료")
+                            strategy_key = "MASTER:ZLMACD_ICHIMOKU"
+                            self.strategies_dict[strategy_key] = zlmacd_strategy
+                            self.strategies.append(zlmacd_strategy)  # 리스트에도 추가
+                            logger.info("✓ [MASTER] ZLMACD_ICHIMOKU 전략 초기화 완료")
                         else:
-                            logger.error("[MASTER] TFPE 전략 생성 실패")
+                            logger.error("[MASTER] ZLMACD_ICHIMOKU 전략 생성 실패")
                 else:
                     logger.error("[MASTER] 필수 컴포넌트 없음")
             

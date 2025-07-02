@@ -16,11 +16,11 @@ multi_account:
       api_secret: "${SUB1_API_SECRET}" # .env 파일에서 로드
       testnet: false
       enabled: true
-      strategy: "ZLMACD_ICHIMOKU"  # ZL MACD + Ichimoku 전략
+      strategy: "ZLHMA_EMA_CROSS"  # ZLHMA EMA Cross 전략 (1h)
       symbols:
         - "BTCUSDT"
-      leverage: 8              # 전략과 동일
-      position_size: 15        # 기본 포지션 크기 15%
+      leverage: 10             # 전략과 동일 (ZLHMA_EMA_CROSS)
+      position_size: 20        # 전략과 동일 (ZLHMA_EMA_CROSS)
       max_positions: 2         # 최대 2개 포지션
       daily_loss_limit: 3.0    # 일일 손실 한도 3%
       max_drawdown: 20.0       # 최대 DD 20%
@@ -381,7 +381,7 @@ strategies:
 
   # ZLHMA 50-200 EMA Cross 전략 (새로 추가)
   zlhma_ema_cross:
-    enabled: false  # 초기에는 비활성화, 테스트 후 활성화
+    enabled: true  # 활성화됨 - Sub1 계좌용
     leverage: 10    # 백테스트 기준 안전한 레버리지
     position_size: 20  # 계좌의 20% (보수적 시작)
     
