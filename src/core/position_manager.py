@@ -256,6 +256,8 @@ class PositionManager:
         
         # 시스템 포지션 ID 추적
         self.system_position_ids = set()
+        # 시스템 포지션 상세 정보 (새로 추가)
+        self.system_position_data = {}  # {position_id: {symbol, strategy, account, created_at, etc}}
         self._load_system_positions()
         
         # 이벤트 핸들러
@@ -281,24 +283,63 @@ class PositionManager:
             logger.warning("⚠️ 알림 매니저가 연결되지 않음 - 알림이 작동하지 않습니다")
     
     def _load_system_positions(self):
-        """시스템 포지션 ID 로드"""
+        """시스템 포지션 정보 로드 (개선된 버전)"""
         try:
             file_path = os.path.join('state', 'system_positions.json')
             if os.path.exists(file_path):
                 with open(file_path, 'r') as f:
                     data = json.load(f)
-                    self.system_position_ids = set(data.get('position_ids', []))
-                    logger.info(f"시스템 포지션 ID 로드: {len(self.system_position_ids)}개")
+                    
+                    # 기존 형식 호환성 유지
+                    if 'position_ids' in data and isinstance(data['position_ids'], list):
+                        # 구버전 형식
+                        self.system_position_ids = set(data['position_ids'])
+                        self.system_position_data = {}
+                        logger.info(f"시스템 포지션 ID 로드 (구버전): {len(self.system_position_ids)}개")
+                    elif 'positions' in data:
+                        # 새 형식
+                        self.system_position_data = data['positions']
+                        self.system_position_ids = set(self.system_position_data.keys())
+                        logger.info(f"시스템 포지션 정보 로드: {len(self.system_position_ids)}개")
+                        
+                        # 디버깅: 로드된 포지션 정보 출력
+                        for pos_id, pos_info in self.system_position_data.items():
+                            logger.debug(f"  - {pos_info.get('symbol')} ({pos_info.get('strategy')})")
         except Exception as e:
             logger.error(f"시스템 포지션 로드 실패: {e}")
             self.system_position_ids = set()
+            self.system_position_data = {}
     
     def _save_system_positions(self):
-        """시스템 포지션 ID 저장"""
+        """시스템 포지션 정보 저장 (개선된 버전)"""
         try:
             os.makedirs('state', exist_ok=True)
-            with open('state/system_positions.json', 'w') as f:
-                json.dump({'position_ids': list(self.system_position_ids)}, f)
+            
+            # 새 형식으로 저장
+            save_data = {
+                'positions': self.system_position_data,
+                'version': '2.0',
+                'last_updated': datetime.now().isoformat()
+            }
+            
+            # 백업 생성
+            file_path = os.path.join('state', 'system_positions.json')
+            if os.path.exists(file_path):
+                backup_path = f"{file_path}.backup"
+                try:
+                    with open(file_path, 'r') as f:
+                        backup_data = f.read()
+                    with open(backup_path, 'w') as f:
+                        f.write(backup_data)
+                except Exception:
+                    pass
+            
+            # 저장
+            with open(file_path, 'w') as f:
+                json.dump(save_data, f, indent=2)
+                
+            logger.debug(f"시스템 포지션 정보 저장: {len(self.system_position_data)}개")
+            
         except Exception as e:
             logger.error(f"시스템 포지션 저장 실패: {e}")
     
@@ -656,55 +697,62 @@ class PositionManager:
     
     async def _is_system_position_improved(self, symbol: str, side: str, size: float, 
                                          entry_price: float, position_id: str) -> bool:
-        """시스템 포지션인지 확인 - 개선된 매칭 로직
+        """시스템 포지션인지 확인 - 개선된 매칭 로직 (시간 제한 없음)
         
-        1. 정확한 ID 매칭
-        2. 최근 생성된 유사 포지션 찾기
-        3. 슬리피지와 시간 차이 허용
+        1. system_position_data에서 정확한 정보 확인
+        2. 캐시된 포지션에서 전략명이 있는 포지션 확인
+        3. 유사 포지션 매칭 (가격/크기 유사성)
         """
-        # 1. 정확한 ID 매칭 시도
-        if position_id in self.system_position_ids:
-            logger.debug(f"{symbol} 정확한 시스템 포지션 ID 매칭")
+        # 1. system_position_data에서 확인 (가장 정확한 방법)
+        if position_id in self.system_position_data:
+            pos_data = self.system_position_data[position_id]
+            logger.info(f"{symbol} 시스템 포지션 데이터 매칭: {pos_data.get('strategy')}")
             return True
         
-        # 2. 최근 생성된 유사 포지션 찾기
-        for existing_pos in self.positions.values():
+        # 2. 시스템 포지션 ID 확인 (레거시 호환)
+        if position_id in self.system_position_ids:
+            logger.debug(f"{symbol} 시스템 포지션 ID 매칭")
+            return True
+        
+        # 3. 캐시된 포지션에서 확인 - 전략명이 있으면 시스템 포지션
+        for key, existing_pos in self.positions.items():
             if (existing_pos.symbol == symbol and
                 existing_pos.side == side and
-                not existing_pos.is_manual and
                 existing_pos.status == PositionStatus.ACTIVE.value):
                 
-                # 시간 체크 - 최근 5분 이내 생성
-                try:
-                    created_time = datetime.fromisoformat(existing_pos.created_at)
-                    time_diff = (datetime.now() - created_time).total_seconds()
+                # 전략명이 있으면 무조건 시스템 포지션
+                if existing_pos.strategy_name is not None and not existing_pos.is_manual:
+                    # 가격과 크기 유사성 체크 (슬리피지 허용)
+                    price_diff_pct = abs(existing_pos.entry_price - entry_price) / existing_pos.entry_price
+                    size_diff_pct = abs(existing_pos.size - size) / existing_pos.size if existing_pos.size > 0 else 1.0
                     
-                    if time_diff < 300:  # 5분 이내
-                        # 가격 유사성 체크 (0.2% 이내 - 슬리피지 허용)
-                        price_diff_pct = abs(existing_pos.entry_price - entry_price) / existing_pos.entry_price
+                    if price_diff_pct < 0.005 and size_diff_pct < 0.001:  # 0.5% 가격차, 0.1% 크기차
+                        logger.info(f"{symbol} 시스템 포지션 매칭 (전략: {existing_pos.strategy_name}): "
+                                  f"가격차={price_diff_pct*100:.3f}%, 크기차={size_diff_pct*100:.3f}%")
                         
-                        if price_diff_pct < 0.002:  # 0.2%
-                            logger.info(f"{symbol} 시스템 포지션 매칭 성공: "
-                                      f"시간차={time_diff:.0f}초, 가격차={price_diff_pct*100:.3f}%")
-                            
-                            # 매칭된 포지션 저장 (나중에 업데이트용)
-                            self._matched_system_position = existing_pos
-                            
-                            # 시스템 포지션 ID에 새 ID도 추가 (다음 번 매칭을 위해)
-                            self.system_position_ids.add(position_id)
-                            self._save_system_positions()
-                            
-                            return True
-                        else:
-                            logger.debug(f"{symbol} 가격 차이 초과: {price_diff_pct*100:.3f}%")
+                        # 매칭된 포지션 저장
+                        self._matched_system_position = existing_pos
+                        
+                        # 새 포지션 ID를 시스템 포지션에 추가
+                        self.system_position_data[position_id] = {
+                            'symbol': symbol,
+                            'strategy': existing_pos.strategy_name,
+                            'account': getattr(self, 'account_name', 'MASTER'),
+                            'created_at': existing_pos.created_at,
+                            'entry_price': entry_price,
+                            'side': side,
+                            'matched_from': key  # 어떤 포지션에서 매칭되었는지
+                        }
+                        self.system_position_ids.add(position_id)
+                        self._save_system_positions()
+                        
+                        return True
                     else:
-                        logger.debug(f"{symbol} 시간 차이 초과: {time_diff:.0f}초")
-                        
-                except Exception as e:
-                    logger.error(f"포지션 매칭 중 오류: {e}")
+                        logger.debug(f"{symbol} 가격/크기 차이로 매칭 실패: "
+                                   f"가격차={price_diff_pct*100:.3f}%, 크기차={size_diff_pct*100:.3f}%")
         
-        # 3. 매칭된 포지션이 없으면 수동 포지션
-        logger.debug(f"{symbol} 매칭되는 시스템 포지션 없음 - 수동 포지션으로 처리")
+        # 4. 매칭 실패 - 수동 포지션으로 처리
+        logger.debug(f"{symbol} 시스템 포지션 매칭 실패 - 수동 포지션으로 처리")
         return False
     
     async def _detect_new_positions(self, exchange_dict: Dict, sync_report: Dict) -> List[Position]:
@@ -1132,25 +1180,57 @@ class PositionManager:
                             'reason': '포지션 청산 감지'
                         })
                 
-                # 청산 알림 (추가된 부분)
-                if self.notification_manager and sys_pos.is_manual:
+                # 청산 알림 - 모든 포지션에 대해 전송
+                if self.notification_manager:
                     # 이벤트 ID 생성: "심볼_closed_포지션ID"
                     event_id = f"{symbol}_closed_{sys_pos.position_id}"
                     
+                    # 수동/시스템 포지션 구분하여 다른 이벤트 타입 사용
+                    if sys_pos.is_manual:
+                        event_type = 'MANUAL_POSITION_CLOSED'
+                        title = f"🔴 {symbol} 수동 포지션 청산"
+                        description = "수동 포지션이 완전히 청산되었습니다."
+                    else:
+                        event_type = 'POSITION_CLOSED'
+                        title = f"🔵 {symbol} 시스템 포지션 청산"
+                        description = f"시스템 포지션이 청산되었습니다. (전략: {sys_pos.strategy_name or 'Unknown'})"
+                    
+                    # 현재가 조회 시도
+                    current_price = None
+                    try:
+                        current_price = await self.binance_api.get_current_price(symbol)
+                    except Exception:
+                        pass
+                    
+                    # PnL 계산 (가능한 경우)
+                    pnl_text = ""
+                    if current_price:
+                        if sys_pos.side == 'LONG':
+                            pnl_pct = (current_price - sys_pos.entry_price) / sys_pos.entry_price * 100
+                        else:
+                            pnl_pct = (sys_pos.entry_price - current_price) / sys_pos.entry_price * 100
+                        pnl_pct *= sys_pos.leverage
+                        pnl_emoji = '🟢' if pnl_pct >= 0 else '🔴'
+                        pnl_text = f"<b>손익:</b> {pnl_emoji} {pnl_pct:+.2f}%\n"
+                    
                     await self.notification_manager.send_alert(
-                        event_type='MANUAL_POSITION_CLOSED',
-                        title=f"🔴 {symbol} 수동 포지션 청산",
+                        event_type=event_type,
+                        title=title,
                         message=(
                             f"<b>방향:</b> {sys_pos.side}\n"
                             f"<b>진입가:</b> ${sys_pos.entry_price:.2f}\n"
-                            f"<b>수량:</b> {sys_pos.size:.4f}\n\n"
-                            f"수동 포지션이 완전히 청산되었습니다."
+                            f"<b>수량:</b> {sys_pos.size:.4f}\n"
+                            f"{pnl_text}"
+                            f"\n{description}"
                         ),
                         data={
                             'symbol': symbol,
                             'side': sys_pos.side,
                             'entry_price': sys_pos.entry_price,
-                            'size': sys_pos.size
+                            'size': sys_pos.size,
+                            'strategy': sys_pos.strategy_name,
+                            'is_manual': sys_pos.is_manual,
+                            'current_price': current_price
                         },
                         event_id=event_id
                     )
@@ -1304,8 +1384,24 @@ class PositionManager:
                     self.strategy_positions[strategy_name] = []
                 self.strategy_positions[strategy_name].append(key)
                 
-                # 시스템 포지션 ID 저장
+                # 시스템 포지션 정보 완전 저장
                 self.system_position_ids.add(position.position_id)
+                
+                # system_position_data에 전체 메타데이터 저장
+                self.system_position_data[position.position_id] = {
+                    'symbol': symbol,
+                    'strategy': strategy_name,
+                    'account': getattr(self, 'account_name', 'MASTER'),
+                    'created_at': creation_time,
+                    'entry_price': entry_price,
+                    'side': side.upper(),
+                    'size': size,
+                    'leverage': leverage,
+                    'stop_loss': stop_loss,
+                    'take_profit': take_profit,
+                    'source': 'add_position'  # 포지션이 어떻게 생성되었는지 추적
+                }
+                
                 self._save_system_positions()
                 
                 await self._save_positions_batch()

@@ -74,10 +74,15 @@ class UnifiedPositionManager:
                 position_manager = self.multi_manager.position_managers.get(account_id)
                 return position_manager.get_active_positions(include_manual=include_manual) if position_manager else []
             else:
-                # 모든 계좌의 포지션
+                # 모든 계좌의 포지션 - 계좌 정보 추가
                 all_positions = []
-                for pm in self.multi_manager.position_managers.values():
-                    all_positions.extend(pm.get_active_positions(include_manual=include_manual))
+                for acc_id, pm in self.multi_manager.position_managers.items():
+                    positions = pm.get_active_positions(include_manual=include_manual)
+                    # 각 포지션에 계좌 정보 추가
+                    for pos in positions:
+                        # 계좌 정보를 속성으로 추가 (원본 객체 수정 방지)
+                        setattr(pos, 'account_name', acc_id)
+                    all_positions.extend(positions)
                 return all_positions
         else:
             # 단일 모드

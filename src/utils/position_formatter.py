@@ -95,9 +95,14 @@ class PositionFormatter:
         # 포지션 방향 이모지
         side_emoji = '🔺' if position.side == 'LONG' else '🔻'
         
+        # 계좌 정보 확인
+        account_info = ""
+        if hasattr(position, 'account_name') and position.account_name:
+            account_info = f" ({position.account_name})"
+        
         # 포맷팅
         return (
-            f"{style.icon} <b>{position.symbol}</b> [{style.short_name}]\n"
+            f"{style.icon} <b>{position.symbol}</b> [{style.short_name}]{account_info}\n"
             f"├ 방향: {side_emoji} {position.side} {position.leverage}x\n"
             f"├ 수량: {position.size:.4f}\n"
             f"├ 진입가: ${position.entry_price:.2f}\n"
@@ -149,7 +154,9 @@ class PositionFormatter:
                 pnl_emoji = '🟢' if pnl >= 0 else '🔴'
                 side_emoji = '🔺' if pos.side == 'LONG' else '🔻'
                 
-                summary += f"  • {pos.symbol}: {side_emoji} {pos.side} "
+                # 계좌 정보 추가
+                acc_info = f" ({pos.account_name})" if hasattr(pos, 'account_name') and pos.account_name else ""
+                summary += f"  • {pos.symbol}{acc_info}: {side_emoji} {pos.side} "
                 summary += f"{pnl_emoji} {pnl:+.2f}%\n"
             
             summary += f"  └ 소계: {'🟢' if strategy_pnl >= 0 else '🔴'} {strategy_pnl:+.2f}%\n\n"

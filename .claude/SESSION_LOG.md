@@ -46,6 +46,9 @@
   - .claude/: SESSION_LOG.md
   - docs/: PYTHON_CONFLICT_RESOLUTION.md
 
+- 2025-07-03 01:45:32 KST: [3528d87] fix: GitHub Actions 워크플로우 수정 - Python 3.10 사용 및 push 트리거 비활성화
+  - .claude/: SESSION_LOG.md
+
 ### 다음 작업
 - [ ] 계속 진행
 
