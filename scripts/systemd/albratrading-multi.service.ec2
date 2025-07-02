@@ -13,11 +13,11 @@ Environment="PYTHONPATH=/home/ubuntu/AlbraTrading"
 Environment="PYTHONUNBUFFERED=1"
 
 # 멀티 계좌 모드 실행
-ExecStart=/home/ubuntu/AlbraTrading/venv/bin/python /home/ubuntu/AlbraTrading/src/main.py
+ExecStart=/home/ubuntu/AlbraTrading/venv/bin/python /home/ubuntu/AlbraTrading/src/main_multi_account.py
 
 # 재시작 정책
-Restart=always
-RestartSec=10
+Restart=on-failure
+RestartSec=30
 
 # 로그 설정
 StandardOutput=append:/home/ubuntu/AlbraTrading/logs/systemd_multi.log
@@ -28,16 +28,21 @@ LimitNOFILE=65536
 LimitNPROC=4096
 
 # 메모리 제한 (멀티 계좌는 더 많은 메모리 필요)
-MemoryMax=4G
+MemoryMax=3G
+MemorySwapMax=0
+OOMPolicy=stop
 
-# 실패 시 재시작 정책
-StartLimitInterval=300
-StartLimitBurst=5
+# 실패 시 재시작 정책 (10분 내 3회로 제한)
+StartLimitInterval=600
+StartLimitBurst=3
+StartLimitAction=none
 
 # 시그널 처리
 KillMode=mixed
 KillSignal=SIGTERM
 TimeoutStopSec=30
+SendSIGKILL=yes
+TimeoutSec=90
 
 [Install]
 WantedBy=multi-user.target

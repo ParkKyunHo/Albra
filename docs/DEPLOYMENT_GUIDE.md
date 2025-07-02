@@ -21,7 +21,7 @@
 ### 3. 필수 파일
 - `.env` 파일 (API 키 포함)
 - `config/config.yaml` (트레이딩 설정)
-- SSH 키 파일 (`~/.ssh/trading-bot-key`)
+- SSH 키 파일 (`~/.ssh/trading-bot4.pem`)
 
 ## 📦 배포 프로세스
 
@@ -78,7 +78,7 @@ deploy_v2.bat
 
 ```bash
 # SSH로 EC2 접속
-ssh -i ~/.ssh/trading-bot-key ubuntu@3.39.88.164
+ssh -i ~/.ssh/trading-bot4.pem ubuntu@43.201.76.89
 
 # 서비스 상태 확인
 sudo systemctl status albratrading-multi

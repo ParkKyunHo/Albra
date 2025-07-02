@@ -1,0 +1,40 @@
+[Unit]
+Description=AlbraTrading System Watchdog
+After=network.target albratrading-multi.service
+Wants=albratrading-multi.service
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/AlbraTrading
+Environment="PATH=/home/ubuntu/AlbraTrading/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="PYTHONPATH=/home/ubuntu/AlbraTrading"
+Environment="PYTHONUNBUFFERED=1"
+
+# Watchdog 실행
+ExecStart=/home/ubuntu/AlbraTrading/venv/bin/python /home/ubuntu/AlbraTrading/scripts/monitoring/system_watchdog.py
+
+# 재시작 정책 (watchdog은 항상 실행되어야 함)
+Restart=always
+RestartSec=30
+
+# 로그 설정
+StandardOutput=append:/home/ubuntu/AlbraTrading/logs/watchdog/systemd.log
+StandardError=append:/home/ubuntu/AlbraTrading/logs/watchdog/systemd_error.log
+
+# 프로세스 제한
+LimitNOFILE=65536
+MemoryMax=512M
+
+# 실패 시 재시작 정책
+StartLimitInterval=600
+StartLimitBurst=10
+
+# 시그널 처리
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=10
+
+[Install]
+WantedBy=multi-user.target

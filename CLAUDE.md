@@ -53,8 +53,8 @@ Windows (deploy.bat) → WSL (deploy_wsl.sh) → EC2
 # WSL에 SSH 키 설정
 mkdir -p ~/.ssh
 chmod 700 ~/.ssh
-cp /mnt/c/Users/박균호/.ssh/trading-bot-key ~/.ssh/
-chmod 600 ~/.ssh/trading-bot-key
+cp /mnt/c/Users/박균호/.ssh/trading-bot4.pem ~/.ssh/
+chmod 600 ~/.ssh/trading-bot4.pem
 ```
 
 #### 사용 방법
@@ -71,7 +71,7 @@ C:\> deploy_v2.bat
 | Windows 접근 | `\\wsl.localhost\Ubuntu\home\albra\AlbraTrading` | - |
 
 ### 주의사항
-- SSH 키는 WSL 내부 `~/.ssh/trading-bot-key`에 위치
+- SSH 키는 WSL 내부 `~/.ssh/trading-bot4.pem`에 위치
 - 모든 Python 스크립트는 WSL Python으로 실행
 - systemd 서비스 파일은 EC2 버전 자동 선택
 - 배포 시 로그 파일 권한은 sudo로 처리
