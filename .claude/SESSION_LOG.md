@@ -129,6 +129,9 @@
 - 2025-07-02 05:58:37 KST: [d41eec0] docs: SESSION_LOG 주요 성과 및 다음 작업 업데이트
   - .claude/: SESSION_LOG.md
 
+- 2025-07-02 06:00:53 KST: [87cb461] docs: 다음 작업 예정에 텔레그램 /status 가동 시간 N/A 문제 추가
+  - .claude/: PROJECT_STATUS.md, SESSION_LOG.md
+
 ### 주요 성과
 1. ✅ WSL 배포 시 종료/시작 알림 시스템 완성
 2. ✅ 멀티 계좌 활성 계좌 카운팅 수정 (MASTER 계좌 포함)

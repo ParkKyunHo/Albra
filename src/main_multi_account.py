@@ -177,6 +177,9 @@ class MultiAccountTradingSystem:
         # 태스크 관리
         self.tasks: List[asyncio.Task] = []
         
+        # 시스템 시작 시간 (telegram_commands 호환성)
+        self.start_time = self.metrics.start_time
+        
         # 시그널 핸들러 등록
         self._setup_signal_handlers()
         
@@ -401,19 +404,7 @@ class MultiAccountTradingSystem:
             self.initialization_complete = True
             logger.info("✅ 멀티 계좌 모드 초기화 완료")
             
-            # 초기화 완료 알림
-            if self.notification_manager and not self.dry_run:
-                stats = self.multi_account_manager.get_system_stats()
-                await self.notification_manager.send_alert(
-                    event_type="SYSTEM_INITIALIZED",
-                    title="🚀 멀티 계좌 시스템 시작",
-                    message=(
-                        f"<b>모드:</b> 멀티 계좌\n"
-                        f"<b>드라이런:</b> {'예' if self.dry_run else '아니오'}\n"
-                        f"<b>활성 계좌:</b> {stats['accounts']['active']}개\n"
-                        f"<b>전체 계좌:</b> {stats['accounts']['total']}개"
-                    )
-                )
+            # 초기화 완료 알림은 run() 메서드에서 통합하여 전송
             
             return True
             
@@ -771,7 +762,7 @@ class MultiAccountTradingSystem:
             self.running = True
             self.is_running = True  # telegram_commands 호환성
             
-            # 시스템 시작 알림 (초기화 때 실패했을 경우를 대비)
+            # 시스템 시작 알림 (통합 버전)
             if self.notification_manager and not self.dry_run:
                 try:
                     # 활성 전략 정보 수집
@@ -781,16 +772,24 @@ class MultiAccountTradingSystem:
                             account_name = getattr(strategy, 'account_name', 'N/A')
                             active_strategies.append(f"{name} ({account_name})")
                     
+                    message = f"<b>AlbraTrading 시스템이 시작되었습니다</b>\n\n"
+                    message += f"<b>운영 모드:</b> {'멀티 계좌' if self.mode == OperationMode.MULTI else '단일 계좌'}\n"
+                    message += f"<b>드라이런:</b> {'예' if self.dry_run else '아니오'}\n"
+                    
+                    # 멀티 계좌 모드일 때 추가 정보
+                    if self.mode == OperationMode.MULTI and self.multi_account_manager:
+                        stats = self.multi_account_manager.get_system_stats()
+                        message += f"<b>활성 계좌:</b> {stats['accounts']['active']}개\n"
+                        message += f"<b>전체 계좌:</b> {stats['accounts']['total']}개\n"
+                    
+                    message += f"<b>활성 전략:</b> {len(active_strategies)}개\n"
+                    if active_strategies:
+                        message += "\n" + chr(10).join(['• ' + s for s in active_strategies])
+                    
                     await self.notification_manager.send_alert(
                         event_type="SYSTEM_STARTED",
-                        title="🏃 시스템 실행 시작",
-                        message=(
-                            f"<b>AlbraTrading 시스템이 시작되었습니다</b>\n\n"
-                            f"<b>운영 모드:</b> {'멀티 계좌' if self.mode == OperationMode.MULTI else '단일 계좌'}\n"
-                            f"<b>드라이런:</b> {'예' if self.dry_run else '아니오'}\n"
-                            f"<b>활성 전략:</b> {len(active_strategies)}개\n"
-                            f"{chr(10).join(['• ' + s for s in active_strategies]) if active_strategies else ''}"
-                        )
+                        title="🚀 AlbraTrading 시스템 시작",
+                        message=message
                     )
                 except Exception as e:
                     logger.error(f"시작 알림 전송 실패: {e}")

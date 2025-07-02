@@ -1,0 +1,43 @@
+[Unit]
+Description=AlbraTrading Bot Service (Multi Account Mode) - EC2
+After=network.target
+Wants=network-online.target
+After=network-online.target
+After=multi-user.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/AlbraTrading
+ExecStart=/home/ubuntu/AlbraTrading/venv/bin/python /home/ubuntu/AlbraTrading/src/main_multi_account.py --mode multi
+Environment="PYTHONUNBUFFERED=1"
+Environment="PATH=/home/ubuntu/AlbraTrading/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="VIRTUAL_ENV=/home/ubuntu/AlbraTrading/venv"
+
+# 재시작 정책 개선
+Restart=on-failure
+RestartSec=30
+StartLimitInterval=300
+StartLimitBurst=3
+
+# 타임아웃 설정
+TimeoutStartSec=60
+TimeoutStopSec=30
+
+# 리소스 제한
+MemoryMax=4G
+CPUQuota=80%
+
+# 로깅
+StandardOutput=append:/home/ubuntu/AlbraTrading/logs/systemd.log
+StandardError=append:/home/ubuntu/AlbraTrading/logs/systemd_error.log
+
+# 프로세스 관리
+KillMode=mixed
+KillSignal=SIGTERM
+SendSIGKILL=yes
+FinalKillSignal=SIGKILL
+
+[Install]
+WantedBy=multi-user.target

@@ -216,17 +216,7 @@ class MultiAccountManager:
             logger.info(f"   - 서브 계좌: {len(self.accounts)}개")
             logger.info(f"   - 활성 계좌: {self.stats['active_accounts']}개")
             
-            # 초기화 알림
-            if self.notification_manager:
-                await self.notification_manager.send_alert(
-                    event_type="SYSTEM_INITIALIZED",
-                    title="🚀 멀티 계좌 시스템 시작",
-                    message=(
-                        f"<b>마스터 계좌:</b> ✅\n"
-                        f"<b>서브 계좌:</b> {len(self.accounts)}개\n"
-                        f"<b>활성 계좌:</b> {self.stats['active_accounts']}개"
-                    )
-                )
+            # 초기화 알림은 main_multi_account.py의 run() 메서드에서만 전송
             
             return True
             
