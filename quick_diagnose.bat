@@ -4,7 +4,7 @@ echo   AlbraTrading 빠른 진단
 echo =====================================
 echo.
 
-set EC2_IP=43.201.76.89
+set EC2_IP=43.200.179.200
 set SSH_KEY=%USERPROFILE%\.ssh\trading-bot4
 
 echo [1] Import 경로 수정 (긴급)...

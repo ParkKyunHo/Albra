@@ -16,6 +16,10 @@
   - scripts/: deploy_wsl.sh
   - .claude/: SESSION_LOG.md
 
+- 2025-07-03 00:55:06 KST: [2752563] fix: t3.micro 인스턴스에 맞게 메모리 제한 조정
+  - scripts/: albratrading-multi.service.ec2, albratrading-single.service.ec2
+  - .claude/: SESSION_LOG.md
+
 ### 다음 작업
 - [ ] 계속 진행
 

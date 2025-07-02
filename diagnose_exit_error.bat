@@ -4,7 +4,7 @@ echo   Exit Code 1 오류 상세 진단
 echo =====================================
 echo.
 
-set EC2_IP=43.201.76.89
+set EC2_IP=43.200.179.200
 set SSH_KEY=%USERPROFILE%\.ssh\trading-bot4
 
 echo [1] 최근 systemd 오류 로그 확인...

@@ -78,7 +78,7 @@ deploy_v2.bat
 
 ```bash
 # SSH로 EC2 접속
-ssh -i ~/.ssh/trading-bot4.pem ubuntu@43.201.76.89
+ssh -i ~/.ssh/trading-bot4.pem ubuntu@43.200.179.200
 
 # 서비스 상태 확인
 sudo systemctl status albratrading-multi
