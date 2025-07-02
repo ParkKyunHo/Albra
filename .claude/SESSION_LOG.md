@@ -53,6 +53,10 @@
   - src/: compatibility.py, position_manager.py, position_formatter.py
   - .claude/: SESSION_LOG.md
 
+- 2025-07-03 02:46:14 KST: [2da5c44] fix: /strategy_status 명령어 전략 찾기 개선
+  - src/: telegram_commands.py
+  - .claude/: SESSION_LOG.md
+
 ### 다음 작업
 - [ ] 계속 진행
 
