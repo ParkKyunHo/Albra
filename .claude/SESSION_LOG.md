@@ -36,6 +36,11 @@
   - .claude/: SESSION_LOG.md
   - docs/: DEPLOYMENT_GUIDE.md, ELASTIC_IP_GUIDE.md
 
+- 2025-07-03 01:38:29 KST: [e1abeb1] docs: Python 3.10 가상환경 설정 문서화 및 시스템 Python 충돌 방지
+  - scripts/: pre_deploy_check.sh, albratrading-multi.service.ec2
+  - .claude/: SESSION_LOG.md
+  - docs/: PYTHON_VERSION_GUIDE.md
+
 ### 다음 작업
 - [ ] 계속 진행
 
