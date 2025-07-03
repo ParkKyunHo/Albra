@@ -120,6 +120,9 @@
 - 2025-07-03 20:04:43 KST: [cb47cc0] feat: 피라미딩 시스템 및 ZLHMA EMA Cross 전략 개선 - EC2 배포 준비
   - .claude/: SESSION_LOG.md
 
+- 2025-07-03 20:20:12 KST: [1721cde] fix: 멀티 계좌 서비스 파일에 --mode multi 옵션 추가
+  - .claude/: SESSION_LOG.md
+
 ### 추가 작업 (2025-07-03)
 - TFPE 전략 완전 분석 수행
   - 독립 실행 확인 (Momentum 전략과 별개)
