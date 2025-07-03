@@ -99,6 +99,9 @@
 - 2025-07-03 16:14:18 KST: [a29ea14] feat: ZLHMA EMA Cross 전용 1시간봉 백테스트 파일 생성
   - .claude/: SESSION_LOG.md
 
+- 2025-07-03 16:22:35 KST: [50abbf1] feat: ZLHMA EMA Cross 1시간봉 백테스트 기간 연장 및 시각화 추가
+  - .claude/: SESSION_LOG.md
+
 ### 추가 작업 (2025-07-03)
 - TFPE 전략 완전 분석 수행
   - 독립 실행 확인 (Momentum 전략과 별개)

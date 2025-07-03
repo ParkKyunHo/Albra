@@ -812,16 +812,25 @@ def create_performance_charts(strategy, start_date: str, end_date: str):
     # 거래 포인트 표시
     if not trades_df.empty:
         for _, trade in trades_df.iterrows():
-            if trade['side'] == 'LONG':
-                ax2.scatter(trade['entry_time'], equity_df.loc[trade['entry_time'], 'equity'], 
-                           color='green', marker='^', s=100, zorder=5)
-                ax2.scatter(trade['exit_time'], equity_df.loc[trade['exit_time'], 'equity'], 
-                           color='red', marker='v', s=100, zorder=5)
-            else:
-                ax2.scatter(trade['entry_time'], equity_df.loc[trade['entry_time'], 'equity'], 
-                           color='red', marker='v', s=100, zorder=5)
-                ax2.scatter(trade['exit_time'], equity_df.loc[trade['exit_time'], 'equity'], 
-                           color='green', marker='^', s=100, zorder=5)
+            # 가장 가까운 시간 찾기
+            try:
+                entry_idx = equity_df.index.get_indexer([trade['entry_time']], method='nearest')[0]
+                exit_idx = equity_df.index.get_indexer([trade['exit_time']], method='nearest')[0]
+                
+                entry_time = equity_df.index[entry_idx]
+                exit_time = equity_df.index[exit_idx]
+                entry_equity = equity_df.iloc[entry_idx]['equity']
+                exit_equity = equity_df.iloc[exit_idx]['equity']
+                
+                if trade['side'] == 'LONG':
+                    ax2.scatter(entry_time, entry_equity, color='green', marker='^', s=100, zorder=5)
+                    ax2.scatter(exit_time, exit_equity, color='red', marker='v', s=100, zorder=5)
+                else:
+                    ax2.scatter(entry_time, entry_equity, color='red', marker='v', s=100, zorder=5)
+                    ax2.scatter(exit_time, exit_equity, color='green', marker='^', s=100, zorder=5)
+            except Exception as e:
+                print(f"Warning: Could not plot trade points: {e}")
+                continue
     
     ax2.set_ylabel('Portfolio Value ($)', fontsize=12)
     ax2.set_title('Portfolio Value Over Time', fontsize=12)
