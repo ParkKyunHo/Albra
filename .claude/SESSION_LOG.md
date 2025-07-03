@@ -75,6 +75,11 @@
 - 2025-07-03 05:59:50 KST: [0ed00cd] docs: 프로젝트 상태 업데이트 - EC2 업그레이드 및 메모리 문제 해결 반영
   - .claude/: PROJECT_STATUS.md, SESSION_LOG.md
 
+- 2025-07-03 06:18:51 KST: [ad023c3] feat: 전략 교체 - Master는 ZLMACD_ICHIMOKU, Sub1은 ZLHMA_EMA_CROSS로 변경
+  - src/: main_multi_account.py
+  - config/: config.yaml
+  - .claude/: SESSION_LOG.md
+
 ### 추가 작업 (2025-07-03)
 - TFPE 전략 완전 분석 수행
   - 독립 실행 확인 (Momentum 전략과 별개)
