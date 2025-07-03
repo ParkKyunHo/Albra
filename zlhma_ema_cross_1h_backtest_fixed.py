@@ -1,6 +1,6 @@
 """
-ZLHMA 50-200 EMA Golden/Death Cross Strategy - 1H Backtest
-ZLHMA(Zero Lag Hull Moving Average) 50-200 EMA 크로스 전략 백테스팅
+ZLHMA 50-200 EMA Golden/Death Cross Strategy - 1H Backtest (Fixed)
+ZLHMA(Zero Lag Hull Moving Average) 50-200 EMA 크로스 전략 백테스팅 - 수정 버전
 """
 
 import pandas as pd
@@ -95,7 +95,7 @@ class SimpleDataFetcher1H:
 
 
 class ZLHMAEMACrossStrategy:
-    """ZLHMA 50-200 EMA Cross Strategy"""
+    """ZLHMA 50-200 EMA Cross Strategy - Fixed Version"""
     
     def __init__(self, initial_capital: float = 10000, timeframe: str = '1h', symbol: str = 'BTC/USDT'):
         self.initial_capital = initial_capital
@@ -388,20 +388,25 @@ class ZLHMAEMACrossStrategy:
         return 0
     
     def execute_trade(self, row: pd.Series, signal: str, position_size: float = None):
-        """거래 실행"""
+        """거래 실행 - 개선된 버전"""
         if signal == 'BUY':
             # 매수 실행
             if position_size is None:
                 position_size = self.calculate_kelly_position_size()
             
-            # 레버리지 적용
-            trade_value = self.capital * position_size * self.leverage
+            # 포지션 증거금 계산 (전체 자본의 일부만 사용)
+            margin_used = self.capital * position_size
             
             # 거래 비용 계산
             entry_price = row['close'] * (1 + self.slippage)
-            commission = trade_value * self.commission
             
-            contracts = (trade_value - commission) / entry_price
+            # 실제 포지션 크기 (레버리지 적용)
+            position_value = margin_used * self.leverage
+            contracts = position_value / entry_price
+            
+            # 수수료 차감
+            commission = position_value * self.commission
+            self.capital -= commission
             
             if self.position is None:
                 # 신규 포지션
@@ -410,11 +415,12 @@ class ZLHMAEMACrossStrategy:
                     'entry_price': entry_price,
                     'contracts': contracts,
                     'entry_time': row.name,
-                    'position_value': trade_value,
+                    'margin_used': margin_used,
+                    'position_value': position_value,
                     'stop_loss': entry_price * (1 - self.initial_stop_loss),
                     'max_contracts': contracts
                 }
-                self.original_position_value = trade_value
+                self.original_position_value = position_value
                 self.highest_price = entry_price
                 self.accumulated_reduction = 0
             else:
@@ -422,31 +428,36 @@ class ZLHMAEMACrossStrategy:
                 self.pyramiding_positions.append({
                     'entry_price': entry_price,
                     'contracts': contracts,
-                    'entry_time': row.name
+                    'entry_time': row.name,
+                    'margin_used': margin_used
                 })
                 # 평균 진입가 재계산
-                total_value = self.position['position_value'] + trade_value
+                total_value = self.position['position_value'] + position_value
                 total_contracts = self.position['contracts'] + contracts
                 self.position['entry_price'] = total_value / total_contracts
                 self.position['contracts'] = total_contracts
                 self.position['position_value'] = total_value
+                self.position['margin_used'] += margin_used
                 self.position['max_contracts'] = max(self.position['max_contracts'], total_contracts)
-            
-            self.capital -= commission
             
         elif signal == 'SELL':
             # 매도 실행
             if position_size is None:
                 position_size = self.calculate_kelly_position_size()
             
-            # 레버리지 적용
-            trade_value = self.capital * position_size * self.leverage
+            # 포지션 증거금 계산
+            margin_used = self.capital * position_size
             
             # 거래 비용 계산
             entry_price = row['close'] * (1 - self.slippage)
-            commission = trade_value * self.commission
             
-            contracts = (trade_value - commission) / entry_price
+            # 실제 포지션 크기 (레버리지 적용)
+            position_value = margin_used * self.leverage
+            contracts = position_value / entry_price
+            
+            # 수수료 차감
+            commission = position_value * self.commission
+            self.capital -= commission
             
             if self.position is None:
                 # 신규 포지션
@@ -455,11 +466,12 @@ class ZLHMAEMACrossStrategy:
                     'entry_price': entry_price,
                     'contracts': contracts,
                     'entry_time': row.name,
-                    'position_value': trade_value,
+                    'margin_used': margin_used,
+                    'position_value': position_value,
                     'stop_loss': entry_price * (1 + self.initial_stop_loss),
                     'max_contracts': contracts
                 }
-                self.original_position_value = trade_value
+                self.original_position_value = position_value
                 self.lowest_price = entry_price
                 self.accumulated_reduction = 0
             else:
@@ -467,20 +479,20 @@ class ZLHMAEMACrossStrategy:
                 self.pyramiding_positions.append({
                     'entry_price': entry_price,
                     'contracts': contracts,
-                    'entry_time': row.name
+                    'entry_time': row.name,
+                    'margin_used': margin_used
                 })
                 # 평균 진입가 재계산
-                total_value = self.position['position_value'] + trade_value
+                total_value = self.position['position_value'] + position_value
                 total_contracts = self.position['contracts'] + contracts
                 self.position['entry_price'] = total_value / total_contracts
                 self.position['contracts'] = total_contracts
                 self.position['position_value'] = total_value
+                self.position['margin_used'] += margin_used
                 self.position['max_contracts'] = max(self.position['max_contracts'], total_contracts)
-            
-            self.capital -= commission
     
     def close_position(self, row: pd.Series, reason: str = 'Signal', partial_ratio: float = 1.0):
-        """포지션 청산"""
+        """포지션 청산 - 개선된 버전"""
         if not self.position:
             return
         
@@ -495,19 +507,23 @@ class ZLHMAEMACrossStrategy:
         # 청산할 계약 수 계산
         contracts_to_close = self.position['contracts'] * partial_ratio
         
-        # PnL 계산
+        # PnL 계산 (레버리지 적용된 손익)
         if self.position['side'] == 'LONG':
-            pnl = (exit_price - self.position['entry_price']) * contracts_to_close
+            price_change = (exit_price - self.position['entry_price']) / self.position['entry_price']
         else:
-            pnl = (self.position['entry_price'] - exit_price) * contracts_to_close
+            price_change = (self.position['entry_price'] - exit_price) / self.position['entry_price']
+        
+        # 실제 손익 계산 (사용한 증거금 대비)
+        margin_used_for_close = self.position['margin_used'] * partial_ratio
+        pnl = margin_used_for_close * price_change * self.leverage
         
         # 수수료 계산
         exit_value = exit_price * contracts_to_close
         commission = exit_value * self.commission
         pnl -= commission
         
-        # 자본 업데이트 (pnl은 이미 수수료를 포함하고 있음)
-        self.capital += pnl
+        # 자본 업데이트 (증거금 반환 + 손익)
+        self.capital += margin_used_for_close + pnl
         
         # 거래 기록
         trade_record = {
@@ -518,7 +534,7 @@ class ZLHMAEMACrossStrategy:
             'exit_price': exit_price,
             'contracts': contracts_to_close,
             'pnl': pnl,
-            'pnl_pct': pnl / (self.position['position_value'] * partial_ratio),
+            'pnl_pct': pnl / margin_used_for_close,
             'reason': reason,
             'capital_after': self.capital
         }
@@ -533,6 +549,7 @@ class ZLHMAEMACrossStrategy:
         # 부분 청산인 경우
         if partial_ratio < 1.0:
             self.position['contracts'] -= contracts_to_close
+            self.position['margin_used'] -= margin_used_for_close
             self.position['position_value'] *= (1 - partial_ratio)
             self.accumulated_reduction += partial_ratio
             
@@ -698,9 +715,9 @@ class ZLHMAEMACrossStrategy:
                 # 미실현 손익 포함
                 current_price = row['close']
                 if self.position['side'] == 'LONG':
-                    unrealized_pnl = (current_price - self.position['entry_price']) * self.position['contracts']
+                    unrealized_pnl = (current_price - self.position['entry_price']) / self.position['entry_price'] * self.position['margin_used'] * self.leverage
                 else:
-                    unrealized_pnl = (self.position['entry_price'] - current_price) * self.position['contracts']
+                    unrealized_pnl = (self.position['entry_price'] - current_price) / self.position['entry_price'] * self.position['margin_used'] * self.leverage
                 current_equity += unrealized_pnl
             
             self.equity_curve.append({
@@ -772,7 +789,7 @@ class ZLHMAEMACrossStrategy:
 
 
 def create_performance_charts(strategy, start_date: str, end_date: str):
-    """성과 차트 생성"""
+    """성과 차트 생성 - 개선된 버전"""
     print("\n📊 Creating performance charts...")
     
     # Equity curve 데이터 준비
@@ -947,7 +964,7 @@ def create_performance_charts(strategy, start_date: str, end_date: str):
 def run_1h_backtest(start_date: str = '2021-01-01', end_date: str = '2025-03-31'):
     """1시간봉 백테스트 실행"""
     print("=" * 80)
-    print("ZLHMA 50-200 EMA Cross Strategy - 1H Backtest")
+    print("ZLHMA 50-200 EMA Cross Strategy - 1H Backtest (Fixed)")
     print("=" * 80)
     
     # 데이터 가져오기
@@ -984,10 +1001,10 @@ def run_1h_backtest(start_date: str = '2021-01-01', end_date: str = '2025-03-31'
         print(f"Largest Loss: ${report['largest_loss']:.2f}")
     
     # 결과 저장
-    results_file = f'zlhma_ema_cross_1h_results_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
+    results_file = f'zlhma_ema_cross_1h_results_fixed_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
     with open(results_file, 'w') as f:
         json.dump({
-            'strategy': 'ZLHMA 50-200 EMA Cross (1H)',
+            'strategy': 'ZLHMA 50-200 EMA Cross (1H) - Fixed',
             'period': f"{start_date} to {end_date}",
             'timeframe': '1h',
             'leverage': strategy.leverage,
@@ -1003,150 +1020,6 @@ def run_1h_backtest(start_date: str = '2021-01-01', end_date: str = '2025-03-31'
     create_performance_charts(strategy, start_date, end_date)
 
 
-def run_walk_forward_1h(start_date: str = '2021-01-01', end_date: str = '2025-03-31'):
-    """Walk-Forward Analysis for 1H data"""
-    print("=" * 80)
-    print("ZLHMA 50-200 EMA Cross Strategy - Walk-Forward Analysis (1H)")
-    print(f"Period: {start_date} to {end_date}")
-    print("=" * 80)
-    
-    # Walk-Forward 윈도우 설정
-    quarters = [
-        ('2021-Q1', '2021-01-01', '2021-03-31'),
-        ('2021-Q2', '2021-04-01', '2021-06-30'),
-        ('2021-Q3', '2021-07-01', '2021-09-30'),
-        ('2021-Q4', '2021-10-01', '2021-12-31'),
-        ('2022-Q1', '2022-01-01', '2022-03-31'),
-        ('2022-Q2', '2022-04-01', '2022-06-30'),
-        ('2022-Q3', '2022-07-01', '2022-09-30'),
-        ('2022-Q4', '2022-10-01', '2022-12-31'),
-        ('2023-Q1', '2023-01-01', '2023-03-31'),
-        ('2023-Q2', '2023-04-01', '2023-06-30'),
-        ('2023-Q3', '2023-07-01', '2023-09-30'),
-        ('2023-Q4', '2023-10-01', '2023-12-31'),
-        ('2024-Q1', '2024-01-01', '2024-03-31'),
-        ('2024-Q2', '2024-04-01', '2024-06-30'),
-        ('2024-Q3', '2024-07-01', '2024-09-30'),
-        ('2024-Q4', '2024-10-01', '2024-12-31'),
-        ('2025-Q1', '2025-01-01', '2025-03-31'),
-    ]
-    
-    results = []
-    cumulative_capital = 10000
-    
-    # 전체 데이터 먼저 가져오기
-    print("\n📊 Fetching complete 1H dataset...")
-    fetcher = SimpleDataFetcher1H()
-    df_full = fetcher.fetch_1h_data('BTC/USDT', start_date, end_date)
-    
-    if df_full is None or len(df_full) == 0:
-        print("❌ Failed to fetch data")
-        return
-    
-    for period_name, period_start, period_end in quarters:
-        if pd.to_datetime(period_end) > pd.to_datetime(end_date):
-            continue
-            
-        print(f"\n{'='*60}")
-        print(f"Testing Period: {period_name} ({period_start} to {period_end})")
-        print(f"{'='*60}")
-        
-        # 해당 기간 데이터 추출
-        period_df = df_full[(df_full.index >= period_start) & (df_full.index <= period_end)].copy()
-        
-        if len(period_df) < 200:  # 최소 데이터 요구사항
-            print(f"⚠️ Insufficient data for {period_name} (only {len(period_df)} candles)")
-            result = {
-                'period': period_name,
-                'start': period_start,
-                'end': period_end,
-                'initial_capital': cumulative_capital,
-                'final_capital': cumulative_capital,
-                'total_return': 0,
-                'win_rate': 0,
-                'profit_factor': 0,
-                'max_drawdown': 0,
-                'sharpe_ratio': 0,
-                'total_trades': 0
-            }
-            results.append(result)
-            continue
-        
-        # 전략 실행
-        strategy = ZLHMAEMACrossStrategy(initial_capital=cumulative_capital, timeframe='1h', symbol='BTC/USDT')
-        report = strategy.backtest(period_df, print_trades=False, plot_chart=False)
-        
-        # 다음 기간을 위한 자본 업데이트
-        cumulative_capital = strategy.capital
-        
-        # 결과 저장
-        result = {
-            'period': period_name,
-            'start': period_start,
-            'end': period_end,
-            'initial_capital': strategy.initial_capital,
-            'final_capital': strategy.capital,
-            **report
-        }
-        results.append(result)
-        
-        # 결과 출력
-        print(f"\n📊 Results for {period_name}:")
-        print(f"  • Total Return: {report['total_return']:.2f}%")
-        print(f"  • Win Rate: {report['win_rate']:.1f}%")
-        print(f"  • Profit Factor: {report['profit_factor']:.2f}")
-        print(f"  • Max Drawdown: {report['max_drawdown']:.2f}%")
-        print(f"  • Total Trades: {report['total_trades']}")
-        print(f"  • Capital: ${strategy.initial_capital:.2f} → ${strategy.capital:.2f}")
-    
-    # 전체 결과 요약
-    print(f"\n{'='*80}")
-    print("OVERALL SUMMARY")
-    print(f"{'='*80}")
-    
-    if results:
-        total_return = ((cumulative_capital - 10000) / 10000) * 100
-        avg_win_rate = np.mean([r['win_rate'] for r in results if r['total_trades'] > 0])
-        avg_profit_factor = np.mean([r['profit_factor'] for r in results if r['profit_factor'] != float('inf') and r['total_trades'] > 0])
-        worst_drawdown = min([r['max_drawdown'] for r in results])
-        total_trades = sum([r['total_trades'] for r in results])
-        
-        print(f"Total Return: {total_return:.2f}% (${10000:.2f} → ${cumulative_capital:.2f})")
-        print(f"Average Win Rate: {avg_win_rate:.1f}%")
-        print(f"Average Profit Factor: {avg_profit_factor:.2f}")
-        print(f"Worst Drawdown: {worst_drawdown:.2f}%")
-        print(f"Total Trades: {total_trades}")
-        print(f"Average Trades per Quarter: {total_trades/len(results):.1f}")
-        
-        # 최고/최저 분기
-        best_quarter = max(results, key=lambda x: x['total_return'])
-        worst_quarter = min(results, key=lambda x: x['total_return'])
-        
-        print(f"\nBest Quarter: {best_quarter['period']} ({best_quarter['total_return']:.2f}%)")
-        print(f"Worst Quarter: {worst_quarter['period']} ({worst_quarter['total_return']:.2f}%)")
-    
-    # 결과 저장
-    results_file = f'zlhma_ema_cross_1h_wf_results_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
-    with open(results_file, 'w') as f:
-        json.dump({
-            'strategy': 'ZLHMA 50-200 EMA Cross (1H)',
-            'period': f"{start_date} to {end_date}",
-            'timeframe': '1h',
-            'leverage': 8,
-            'results': results,
-            'summary': {
-                'total_return': total_return if results else 0,
-                'final_capital': cumulative_capital,
-                'total_quarters': len(results)
-            }
-        }, f, indent=2, default=str)
-    
-    print(f"\n✅ Walk-Forward results saved to {results_file}")
-
-
 if __name__ == "__main__":
     # 전체 백테스트 실행
     run_1h_backtest()
-    
-    # Walk-Forward Analysis 실행 (선택사항)
-    # run_walk_forward_1h()
