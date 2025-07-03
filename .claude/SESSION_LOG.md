@@ -126,6 +126,11 @@
 - 2025-07-03 20:30:03 KST: [f1d2e54] cleanup: 프로젝트 루트 정리 - 백테스트 및 임시 파일 archive로 이동
   - .claude/: SESSION_LOG.md, settings.local.json
 
+- 2025-07-03 22:35:50 KST: [dfabd6c] feat: ZLMACD Ichimoku 백테스트 개선 적용 및 배포 스크립트 자동화
+  - scripts/: deploy_wsl.sh
+  - config/: config.yaml
+  - .claude/: SESSION_LOG.md
+
 ### 추가 작업 (2025-07-03)
 - TFPE 전략 완전 분석 수행
   - 독립 실행 확인 (Momentum 전략과 별개)
