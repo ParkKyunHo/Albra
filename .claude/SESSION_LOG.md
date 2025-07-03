@@ -113,6 +113,10 @@
   - config/: config.yaml
   - .claude/: SESSION_LOG.md
 
+- 2025-07-03 19:50:08 KST: [ed4cf5c] fix: ZLHMA EMA Cross 전략 백테스트 파라미터 적용 및 불필요한 파일 제거
+  - src/: zlhma_ema_cross_strategy.py
+  - .claude/: SESSION_LOG.md
+
 ### 추가 작업 (2025-07-03)
 - TFPE 전략 완전 분석 수행
   - 독립 실행 확인 (Momentum 전략과 별개)
