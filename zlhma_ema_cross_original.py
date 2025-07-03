@@ -924,67 +924,161 @@ class ZLHMAEMACrossStrategy:
         }
 
 
-def main():
-    """메인 실행 함수"""
-    print("=" * 80)
-    print("ZLHMA 50-200 EMA Cross Strategy - Real Data Backtest (Exact Copy)")
-    print("=" * 80)
+def run_walk_forward_analysis(start_date: str = '2021-01-01', end_date: str = '2025-06-30'):
+    """Walk-Forward Analysis 실행"""
+    print(f"\n{'='*80}")
+    print(f"ZLHMA 50-200 EMA Cross Strategy - Walk-Forward Analysis")
+    print(f"Period: {start_date} to {end_date}")
+    print(f"{'='*80}\n")
     
     # 데이터 가져오기
     fetcher = DataFetcherFixed(use_cache=True)
     
-    # 기간 설정
-    start_date = '2024-01-01'
-    end_date = '2025-06-30'
+    # 전체 기간 데이터 가져오기
+    print(f"📊 Fetching complete dataset for BTC/USDT...")
+    df_4h, df_15m = fetcher.fetch_data('BTC/USDT', start_date, end_date)
     
-    print(f"\n📊 Fetching BTC/USDT data from {start_date} to {end_date}...")
+    if df_4h is None or len(df_4h) == 0:
+        print("❌ Failed to fetch data")
+        return
     
-    try:
-        # DataFetcherFixed는 두 개의 값을 반환 (4h, 15m)
-        df_4h, _ = fetcher.fetch_data('BTC/USDT', start_date, end_date)
+    print(f"✅ Fetched {len(df_4h)} 1H candles")
+    
+    # Walk-Forward 윈도우 설정
+    quarters = [
+        ('2021-Q1', '2021-01-01', '2021-03-31'),
+        ('2021-Q2', '2021-04-01', '2021-06-30'),
+        ('2021-Q3', '2021-07-01', '2021-09-30'),
+        ('2021-Q4', '2021-10-01', '2021-12-31'),
+        ('2022-Q1', '2022-01-01', '2022-03-31'),
+        ('2022-Q2', '2022-04-01', '2022-06-30'),
+        ('2022-Q3', '2022-07-01', '2022-09-30'),
+        ('2022-Q4', '2022-10-01', '2022-12-31'),
+        ('2023-Q1', '2023-01-01', '2023-03-31'),
+        ('2023-Q2', '2023-04-01', '2023-06-30'),
+        ('2023-Q3', '2023-07-01', '2023-09-30'),
+        ('2023-Q4', '2023-10-01', '2023-12-31'),
+        ('2024-Q1', '2024-01-01', '2024-03-31'),
+        ('2024-Q2', '2024-04-01', '2024-06-30'),
+        ('2024-Q3', '2024-07-01', '2024-09-30'),
+        ('2024-Q4', '2024-10-01', '2024-12-31'),
+        ('2025-Q1', '2025-01-01', '2025-03-31'),
+        ('2025-Q2', '2025-04-01', '2025-06-30'),
+    ]
+    
+    results = []
+    cumulative_capital = 10000
+    
+    for period_name, period_start, period_end in quarters:
+        print(f"\n{'='*60}")
+        print(f"Testing Period: {period_name} ({period_start} to {period_end})")
+        print(f"{'='*60}")
         
-        if df_4h is None or len(df_4h) == 0:
-            print("❌ Failed to fetch data")
-            return
+        # 해당 기간 데이터 추출
+        period_df = df_4h[(df_4h.index >= period_start) & (df_4h.index <= period_end)].copy()
         
-        print(f"✅ Fetched {len(df_4h)} candles")
-        print(f"  Price range: ${df_4h['close'].min():.0f} - ${df_4h['close'].max():.0f}")
+        if len(period_df) < 200:  # 최소 데이터 요구사항
+            print(f"⚠️ Insufficient data for {period_name} (only {len(period_df)} candles)")
+            continue
         
         # 전략 실행
-        strategy = ZLHMAEMACrossStrategy(initial_capital=10000, timeframe='1h', symbol='BTC/USDT')
-        report = strategy.backtest(df_4h, print_trades=True, plot_chart=False)
+        strategy = ZLHMAEMACrossStrategy(initial_capital=cumulative_capital, timeframe='1h', symbol='BTC/USDT')
+        report = strategy.backtest(period_df, print_trades=False, plot_chart=False)
         
-        # 결과 출력
-        print("\n" + "=" * 50)
-        print("BACKTEST RESULTS")
-        print("=" * 50)
-        print(f"Total Return: {report['total_return']:.2f}%")
-        print(f"Win Rate: {report['win_rate']:.1f}%")
-        print(f"Profit Factor: {report['profit_factor']:.2f}")
-        print(f"Max Drawdown: {report['max_drawdown']:.2f}%")
-        print(f"Sharpe Ratio: {report['sharpe_ratio']:.2f}")
-        print(f"Total Trades: {report['total_trades']}")
-        print(f"Winning Trades: {report['winning_trades']}")
-        print(f"Losing Trades: {report['losing_trades']}")
-        print(f"Average Win: {report['avg_win']:.2f}%")
-        print(f"Average Loss: {report['avg_loss']:.2f}%")
+        # 다음 기간을 위한 자본 업데이트
+        cumulative_capital = strategy.capital
         
         # 결과 저장
-        results_file = 'zlhma_ema_cross_exact_copy_results.json'
-        with open(results_file, 'w') as f:
-            json.dump({
-                'strategy': 'ZLHMA 50-200 EMA Cross (Exact Copy)',
-                'period': f"{start_date} to {end_date}",
-                'leverage': strategy.leverage,
-                'results': report
-            }, f, indent=2)
+        result = {
+            'period': period_name,
+            'start': period_start,
+            'end': period_end,
+            'initial_capital': strategy.initial_capital,
+            'final_capital': strategy.capital,
+            **report
+        }
+        results.append(result)
         
-        print(f"\n✅ Results saved to {results_file}")
+        # 결과 출력
+        print(f"\n📊 Results for {period_name}:")
+        print(f"  • Total Return: {report['total_return']:.2f}%")
+        print(f"  • Win Rate: {report['win_rate']:.1f}%")
+        print(f"  • Profit Factor: {report['profit_factor']:.2f}")
+        print(f"  • Max Drawdown: {report['max_drawdown']:.2f}%")
+        print(f"  • Total Trades: {report['total_trades']}")
+        print(f"  • Capital: ${strategy.initial_capital:.2f} → ${strategy.capital:.2f}")
+    
+    # 전체 결과 요약
+    print(f"\n{'='*80}")
+    print("OVERALL SUMMARY")
+    print(f"{'='*80}")
+    
+    if results:
+        total_return = ((cumulative_capital - 10000) / 10000) * 100
+        avg_win_rate = np.mean([r['win_rate'] for r in results])
+        avg_profit_factor = np.mean([r['profit_factor'] for r in results if r['profit_factor'] != float('inf')])
+        worst_drawdown = min([r['max_drawdown'] for r in results])
+        total_trades = sum([r['total_trades'] for r in results])
         
-    except Exception as e:
-        print(f"❌ Error during backtest: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        print(f"Total Return: {total_return:.2f}% (${10000:.2f} → ${cumulative_capital:.2f})")
+        print(f"Average Win Rate: {avg_win_rate:.1f}%")
+        print(f"Average Profit Factor: {avg_profit_factor:.2f}")
+        print(f"Worst Drawdown: {worst_drawdown:.2f}%")
+        print(f"Total Trades: {total_trades}")
+        
+        # 최고/최저 분기
+        best_quarter = max(results, key=lambda x: x['total_return'])
+        worst_quarter = min(results, key=lambda x: x['total_return'])
+        
+        print(f"\nBest Quarter: {best_quarter['period']} ({best_quarter['total_return']:.2f}%)")
+        print(f"Worst Quarter: {worst_quarter['period']} ({worst_quarter['total_return']:.2f}%)")
+    
+    # 결과 저장
+    results_file = f'zlhma_ema_cross_wf_results_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
+    with open(results_file, 'w') as f:
+        json.dump({
+            'strategy': 'ZLHMA 50-200 EMA Cross',
+            'period': f"{start_date} to {end_date}",
+            'leverage': 8,
+            'results': results,
+            'summary': {
+                'total_return': total_return if results else 0,
+                'final_capital': cumulative_capital,
+                'total_quarters': len(results)
+            }
+        }, f, indent=2, default=str)
+    
+    print(f"\n✅ Results saved to {results_file}")
+    
+    # Equity Curve 플로팅
+    if results:
+        plt.figure(figsize=(12, 6))
+        
+        # 분기별 자본 추이
+        periods = [r['period'] for r in results]
+        capitals = [r['final_capital'] for r in results]
+        
+        plt.plot(periods, capitals, marker='o', linewidth=2)
+        plt.axhline(y=10000, color='r', linestyle='--', alpha=0.5, label='Initial Capital')
+        
+        plt.title('ZLHMA 50-200 EMA Cross - Walk-Forward Equity Curve')
+        plt.xlabel('Period')
+        plt.ylabel('Capital ($)')
+        plt.xticks(rotation=45)
+        plt.grid(True, alpha=0.3)
+        plt.legend()
+        plt.tight_layout()
+        
+        chart_file = f'zlhma_ema_cross_wf_equity_{datetime.now().strftime("%Y%m%d_%H%M%S")}.png'
+        plt.savefig(chart_file)
+        print(f"📊 Equity curve saved to {chart_file}")
+        plt.close()
+
+
+def main():
+    """메인 실행 함수"""
+    # Walk-Forward Analysis 실행
+    run_walk_forward_analysis()
 
 
 if __name__ == "__main__":

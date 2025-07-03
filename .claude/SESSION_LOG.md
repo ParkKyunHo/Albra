@@ -87,6 +87,9 @@
   - scripts/: health_check.py, setup_log_rotation.sh
   - .claude/: SESSION_LOG.md
 
+- 2025-07-03 15:38:47 KST: [9ac9bdc] fix: ZLHMA EMA Cross 백테스트 원본과 100% 동일하게 구현 - 모든 로직 완벽 복사
+  - .claude/: SESSION_LOG.md
+
 ### 추가 작업 (2025-07-03)
 - TFPE 전략 완전 분석 수행
   - 독립 실행 확인 (Momentum 전략과 별개)
