@@ -83,6 +83,10 @@
 - 2025-07-03 09:14:50 KST: [25c7d6b] docs: ZLHMA EMA Cross 전략 분석 세션 저장 - 원본 코드 발견 및 핵심 차이점 정리
   - .claude/: SESSION_LOG.md, ZLHMA_ANALYSIS_SESSION.md
 
+- 2025-07-03 15:04:10 KST: [04602db] fix: health_check.py 프로세스 누적 문제 해결 - 무한 루프 제거 및 lock 메커니즘 추가
+  - scripts/: health_check.py, setup_log_rotation.sh
+  - .claude/: SESSION_LOG.md
+
 ### 추가 작업 (2025-07-03)
 - TFPE 전략 완전 분석 수행
   - 독립 실행 확인 (Momentum 전략과 별개)
