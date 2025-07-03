@@ -108,6 +108,11 @@
 - 2025-07-03 16:33:09 KST: [f24ba1d] fix: ZLHMA EMA Cross 백테스트 자본 관리 로직 전면 수정
   - .claude/: SESSION_LOG.md
 
+- 2025-07-03 19:49:05 KST: [cc67745] feat: 피라미딩 시스템 구현 및 ZLMACD Ichimoku TODO 완성
+  - src/: pyramiding_manager.py, main.py, main_multi_account.py
+  - config/: config.yaml
+  - .claude/: SESSION_LOG.md
+
 ### 추가 작업 (2025-07-03)
 - TFPE 전략 완전 분석 수행
   - 독립 실행 확인 (Momentum 전략과 별개)
