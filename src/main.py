@@ -48,6 +48,7 @@ from src.core.fast_position_monitor import FastPositionMonitor
 from src.core.event_logger import get_event_logger, log_event
 from src.monitoring.position_sync_monitor import PositionSyncMonitor
 from src.core.phase2_integration import Phase2Integration, setup_phase2_components
+from src.core.pyramiding_manager import PyramidingManager
 from src.analysis.market_regime_analyzer import get_regime_analyzer
 from src.analysis.performance_tracker import get_performance_tracker
 from src.core.risk_parity_allocator import get_risk_parity_allocator
@@ -109,6 +110,7 @@ class TradingSystem:
         self.market_regime_analyzer = None
         self.performance_tracker = None
         self.risk_parity_allocator = None
+        self.pyramiding_manager = None
         
         # 멀티계좌 관리자
         self.multi_account_manager = None
@@ -287,6 +289,20 @@ class TradingSystem:
             self.risk_parity_allocator = get_risk_parity_allocator(self.performance_tracker)
             logger.info("✓ Risk Parity Allocator 초기화 완료")
             
+            # PyramidingManager 초기화
+            pyramiding_config = self.config.get('pyramiding', {})
+            if pyramiding_config.get('enabled', False):
+                from src.core.event_bus import get_event_bus
+                self.pyramiding_manager = PyramidingManager(
+                    position_manager=self.position_manager,
+                    event_bus=get_event_bus(),  # Event Bus 인스턴스 가져오기
+                    config=pyramiding_config
+                )
+                logger.info("✓ PyramidingManager 초기화 완료")
+            else:
+                self.pyramiding_manager = None
+                logger.info("피라미딩 비활성화됨")
+            
             # 빠른 포지션 모니터 초기화
             self.fast_monitor = FastPositionMonitor(
                 self.position_manager,
@@ -388,6 +404,23 @@ class TradingSystem:
                         )
                         if strategy:
                             self.strategies.append(strategy)
+                            
+                            # 컴포넌트 주입
+                            if self.notification_manager and hasattr(strategy, 'notification_manager'):
+                                strategy.notification_manager = self.notification_manager
+                            if hasattr(strategy, "performance_tracker"):
+                                strategy.performance_tracker = self.performance_tracker
+                            if hasattr(strategy, "market_regime_analyzer"):
+                                strategy.market_regime_analyzer = self.market_regime_analyzer
+                            if hasattr(strategy, "risk_parity_allocator"):
+                                strategy.risk_parity_allocator = self.risk_parity_allocator
+                            
+                            # PyramidingManager 주입
+                            if self.pyramiding_manager and hasattr(strategy, 'pyramiding_enabled'):
+                                if strategy.pyramiding_enabled:
+                                    strategy.pyramiding_manager = self.pyramiding_manager
+                                    logger.info(f"✓ {name} 전략에 PyramidingManager 연결")
+                            
                             logger.info(f"✓ 마스터 계좌 전략 초기화: {name}")
                 
             else:
@@ -437,6 +470,12 @@ class TradingSystem:
                         strategy.market_regime_analyzer = self.market_regime_analyzer
                     if hasattr(strategy, "risk_parity_allocator"):
                         strategy.risk_parity_allocator = self.risk_parity_allocator
+                    
+                    # PyramidingManager 주입
+                    if self.pyramiding_manager and hasattr(strategy, 'pyramiding_enabled'):
+                        if strategy.pyramiding_enabled:
+                            strategy.pyramiding_manager = self.pyramiding_manager
+                            logger.info(f"✓ {strategy.name} 전략에 PyramidingManager 연결")
                 
                 if hasattr(self.position_manager, 'symbols'):
                     self.position_manager.symbols = list(all_symbols)

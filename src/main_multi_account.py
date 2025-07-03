@@ -48,6 +48,7 @@ from src.strategies.strategy_factory import get_strategy_factory
 from src.strategies.strategy_config import StrategyConfigManager
 from src.web.dashboard import DashboardApp
 from src.analysis.performance_tracker import PerformanceTracker
+from src.core.pyramiding_manager import PyramidingManager
 
 # Phase 2 imports
 from src.core.multi_account.account_manager import MultiAccountManager
@@ -163,6 +164,9 @@ class MultiAccountTradingSystem:
         self.position_sync_monitor: Optional[PositionSyncMonitor] = None
         self.health_checker: Optional[SystemHealthChecker] = None
         self.mdd_manager: Optional[ImprovedMDDManager] = None
+        
+        # 피라미딩 관리자
+        self.pyramiding_manager: Optional[PyramidingManager] = None
         
         # 전략
         self.strategies_dict: Dict[str, Any] = {}  # 계좌별 전략 관리 (내부 용도)
@@ -453,6 +457,19 @@ class MultiAccountTradingSystem:
             )
             logger.info("✓ Performance Tracker 초기화 완료")
             
+            # 6. PyramidingManager 초기화
+            pyramiding_config = self.config_manager.config.get('pyramiding', {})
+            if pyramiding_config:  # 설정이 있는 경우에만 초기화
+                # Event Bus가 필요하지만 현재 시스템에 없으므로 None으로 설정
+                self.pyramiding_manager = PyramidingManager(
+                    position_manager=self.unified_position_manager,
+                    event_bus=None,  # TODO: Event Bus 통합 시 연결
+                    config=pyramiding_config
+                )
+                logger.info("✓ PyramidingManager 초기화 완료")
+                logger.info(f"  - 피라미딩 타입: {pyramiding_config.get('pyramiding_type', 'SCALED')}")
+                logger.info(f"  - 최대 레벨: {pyramiding_config.get('max_pyramiding_per_symbol', 3)}")
+            
         except Exception as e:
             logger.error(f"모니터링 컴포넌트 초기화 실패: {e}")
             raise
@@ -482,6 +499,11 @@ class MultiAccountTradingSystem:
                 )
                 
                 if strategy:
+                    # PyramidingManager 주입 (있는 경우)
+                    if self.pyramiding_manager and full_config.get('pyramiding_enabled', False):
+                        strategy.pyramiding_manager = self.pyramiding_manager
+                        logger.info(f"  - 피라미딩 활성화")
+                    
                     self.strategies_dict[strategy_name] = strategy
                     self.strategies.append(strategy)  # 리스트에도 추가
                     logger.info(f"✓ {strategy_name} 전략 초기화 완료")
@@ -533,6 +555,11 @@ class MultiAccountTradingSystem:
                 )
                 
                 if strategy:
+                    # PyramidingManager 주입 (있는 경우)
+                    if self.pyramiding_manager and full_config.get('pyramiding_enabled', False):
+                        strategy.pyramiding_manager = self.pyramiding_manager
+                        logger.info(f"  - 피라미딩 활성화")
+                    
                     # 전략에 계좌 이름 설정 (telegram_commands 호환성)
                     strategy.account_name = account_id
                     strategy.account_id = account_id
@@ -564,6 +591,11 @@ class MultiAccountTradingSystem:
                         )
                         
                         if zlmacd_strategy:
+                            # PyramidingManager 주입 (있는 경우)
+                            if self.pyramiding_manager and zlmacd_config.get('pyramiding_enabled', False):
+                                zlmacd_strategy.pyramiding_manager = self.pyramiding_manager
+                                logger.info(f"  - 피라미딩 활성화")
+                            
                             # 전략에 계좌 이름 설정 (telegram_commands 호환성)
                             zlmacd_strategy.account_name = 'MASTER'
                             zlmacd_strategy.account_id = 'MASTER'

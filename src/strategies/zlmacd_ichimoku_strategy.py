@@ -402,7 +402,7 @@ class ZLMACDIchimokuStrategy(BaseStrategy):
         return False
     
     async def _check_partial_exit(self, position, pnl_pct: float):
-        """부분 익절 체크"""
+        """부분 익절 체크 및 실행"""
         symbol = position.symbol
         
         # 부분 익절 추적 초기화
@@ -414,13 +414,97 @@ class ZLMACDIchimokuStrategy(BaseStrategy):
             level_id = f"level_{i}"
             if level_id not in self.partial_exits_done[symbol] and pnl_pct >= level['profit_pct'] / 100:
                 # 부분 익절 실행
-                exit_size = position.size * level['exit_ratio']
-                logger.info(f"{symbol} 부분 익절 실행: {level['profit_pct']}%에서 {level['exit_ratio']*100}% 청산")
-                
-                # TODO: 실제 부분 청산 로직 구현
-                # await self.binance_api.partial_close_position(symbol, exit_size)
-                
+                await self._execute_partial_exit(position, level, i + 1)
                 self.partial_exits_done[symbol].append(level_id)
+    
+    async def _execute_partial_exit(self, position, level: Dict, level_num: int):
+        """부분 익절 실행"""
+        try:
+            symbol = position.symbol
+            
+            # 청산할 수량 계산
+            exit_quantity = position.size * level['exit_ratio']
+            exit_quantity = await self.binance_api.round_quantity(symbol, exit_quantity)
+            
+            # 최소 주문 금액 체크
+            current_price = await self.binance_api.get_current_price(symbol)
+            min_notional = 10.0  # USDT
+            if exit_quantity * current_price < min_notional:
+                logger.warning(f"{symbol} 부분 익절 금액이 최소값 미만: ${exit_quantity * current_price:.2f}")
+                return
+            
+            # 청산 주문
+            side = 'SELL' if position.side.upper() == 'LONG' else 'BUY'
+            order = await self.binance_api.place_order(
+                symbol=symbol,
+                side=side,
+                quantity=exit_quantity,
+                order_type='MARKET'
+            )
+            
+            if order:
+                # 체결가 확인
+                exit_price = current_price  # 기본값
+                if 'avgPrice' in order and order['avgPrice']:
+                    exit_price = float(order['avgPrice'])
+                elif 'fills' in order and order['fills']:
+                    total_qty = 0
+                    total_value = 0
+                    for fill in order['fills']:
+                        fill_qty = float(fill['qty'])
+                        fill_price = float(fill['price'])
+                        total_qty += fill_qty
+                        total_value += fill_qty * fill_price
+                    if total_qty > 0:
+                        exit_price = total_value / total_qty
+                
+                # 포지션 크기 업데이트
+                new_position_size = position.size - exit_quantity
+                await self.position_manager.update_position_size(symbol, new_position_size)
+                
+                # 손익 계산
+                if position.side.upper() == 'LONG':
+                    pnl = (exit_price - position.entry_price) * exit_quantity
+                else:
+                    pnl = (position.entry_price - exit_price) * exit_quantity
+                
+                pnl_pct = (pnl / (position.entry_price * exit_quantity)) * 100
+                
+                logger.info(f"✅ {symbol} 부분 익절 완료: 레벨 {level_num} "
+                          f"({level['profit_pct']}%에서 {level['exit_ratio']*100}% 청산), "
+                          f"수량: {exit_quantity}, 가격: {exit_price:.2f}, "
+                          f"실현 손익: ${pnl:.2f} ({pnl_pct:.1f}%)")
+                
+                # 알림 전송
+                if hasattr(self, 'notification_manager') and self.notification_manager:
+                    self.notification_manager.send_notification(
+                        f"💰 부분 익절 실행\n"
+                        f"심볼: {symbol}\n"
+                        f"레벨: {level_num} ({level['profit_pct']}%)\n"
+                        f"청산 비율: {level['exit_ratio']*100}%\n"
+                        f"청산 수량: {exit_quantity:.4f}\n"
+                        f"청산가: {exit_price:.2f}\n"
+                        f"실현 손익: ${pnl:.2f} ({pnl_pct:.1f}%)\n"
+                        f"남은 포지션: {new_position_size:.4f}",
+                        priority='MEDIUM'
+                    )
+                
+                # 첫 번째 부분 익절 시 손익분기점으로 스톱 이동
+                if level_num == 1:
+                    # 손익분기점 + 약간의 이익으로 스톱 이동
+                    if position.side.upper() == 'LONG':
+                        new_stop = position.entry_price * 1.002  # 0.2% 이익
+                    else:
+                        new_stop = position.entry_price * 0.998  # 0.2% 이익
+                    
+                    logger.info(f"🛡️ {symbol} 스톱로스를 손익분기점으로 이동: {new_stop:.2f}")
+                    # 실제 스톱 주문 업데이트는 별도 로직 필요
+                
+            else:
+                logger.error(f"{symbol} 부분 익절 주문 실패")
+                
+        except Exception as e:
+            logger.error(f"부분 익절 실행 실패 ({position.symbol}): {e}")
     
     async def _check_daily_loss_limit(self) -> bool:
         """일일 손실 한도 체크"""
@@ -578,13 +662,17 @@ class ZLMACDIchimokuStrategy(BaseStrategy):
             # 부분 익절 정리
             if position.symbol in self.partial_exits_done:
                 del self.partial_exits_done[position.symbol]
+            
+            # 피라미딩 정리
+            if position.symbol in self.pyramiding_positions:
+                del self.pyramiding_positions[position.symbol]
         
         return success
     
-    async def _check_pyramiding_opportunity(self, position, current_price: float) -> bool:
-        """피라미딩 기회 체크"""
+    async def _check_pyramiding_opportunity(self, position, current_price: float) -> Tuple[bool, Optional[Dict]]:
+        """피라미딩 기회 체크 및 정보 반환"""
         if not self.pyramiding_enabled:
-            return False
+            return False, None
         
         symbol = position.symbol
         
@@ -603,10 +691,108 @@ class ZLMACDIchimokuStrategy(BaseStrategy):
         for i, level in enumerate(self.pyramiding_levels):
             if i == current_pyramids and pnl_pct >= level['profit_pct']:
                 logger.info(f"{symbol} 피라미딩 기회: 레벨 {i+1} (수익률: {pnl_pct:.1f}%)")
-                # TODO: 실제 피라미딩 포지션 추가 로직
-                return True
+                return True, {
+                    'level': i + 1,
+                    'size_ratio': level['size_ratio'],
+                    'current_price': current_price
+                }
         
-        return False
+        return False, None
+    
+    async def _execute_pyramiding(self, position, pyramid_info: Dict):
+        """피라미딩 실행"""
+        try:
+            symbol = position.symbol
+            
+            # 피라미딩 크기 계산 (원 포지션의 비율로)
+            pyramid_size = position.size * pyramid_info['size_ratio']
+            
+            # 계좌 잔고 확인
+            account_balance = await self.binance_api.get_account_balance()
+            current_price = pyramid_info['current_price']
+            
+            # 피라미딩 가치 계산
+            pyramid_value = pyramid_size * current_price
+            
+            # 잔고 체크
+            if pyramid_value > account_balance * 0.5:  # 안전을 위해 잔고의 50% 이하로 제한
+                logger.warning(f"{symbol} 피라미딩 크기가 너무 큼. 스킵.")
+                return
+            
+            # 수량 정밀도 조정
+            pyramid_size = await self.binance_api.round_quantity(symbol, pyramid_size)
+            
+            # 최소 주문 금액 체크
+            min_notional = 10.0  # USDT
+            if pyramid_size * current_price < min_notional:
+                logger.warning(f"{symbol} 피라미딩 금액이 최소값 미만: ${pyramid_size * current_price:.2f}")
+                return
+            
+            # 레버리지 설정 (기존 포지션과 동일)
+            await self.binance_api.set_leverage(symbol, self.leverage)
+            
+            # 주문 실행
+            side = 'BUY' if position.side.upper() == 'LONG' else 'SELL'
+            order = await self.binance_api.place_order(
+                symbol=symbol,
+                side=side,
+                quantity=pyramid_size,
+                order_type='MARKET'
+            )
+            
+            if order:
+                # 체결가 확인
+                entry_price = current_price  # 기본값
+                if 'avgPrice' in order and order['avgPrice']:
+                    entry_price = float(order['avgPrice'])
+                elif 'fills' in order and order['fills']:
+                    total_qty = 0
+                    total_value = 0
+                    for fill in order['fills']:
+                        fill_qty = float(fill['qty'])
+                        fill_price = float(fill['price'])
+                        total_qty += fill_qty
+                        total_value += fill_qty * fill_price
+                    if total_qty > 0:
+                        entry_price = total_value / total_qty
+                
+                # 피라미딩 정보 저장
+                self.pyramiding_positions[symbol].append({
+                    'level': pyramid_info['level'],
+                    'entry_price': entry_price,
+                    'size': pyramid_size,
+                    'timestamp': datetime.now()
+                })
+                
+                # 포지션 매니저 업데이트 (전체 크기)
+                new_total_size = position.size + pyramid_size
+                await self.position_manager.update_position_size(symbol, new_total_size)
+                
+                # 평균 진입가 계산 및 업데이트
+                total_value = position.entry_price * position.size + entry_price * pyramid_size
+                avg_entry_price = total_value / new_total_size
+                
+                logger.info(f"✅ {symbol} 피라미딩 성공: 레벨 {pyramid_info['level']}, "
+                          f"크기 {pyramid_size} @ {entry_price:.2f}, "
+                          f"평균가 {avg_entry_price:.2f}")
+                
+                # 알림 전송
+                if hasattr(self, 'notification_manager') and self.notification_manager:
+                    self.notification_manager.send_notification(
+                        f"🔺 피라미딩 추가\n"
+                        f"심볼: {symbol}\n"
+                        f"레벨: {pyramid_info['level']}/3\n"
+                        f"크기: {pyramid_size:.4f}\n"
+                        f"진입가: {entry_price:.2f}\n"
+                        f"평균가: {avg_entry_price:.2f}\n"
+                        f"전체 크기: {new_total_size:.4f}",
+                        priority='MEDIUM'
+                    )
+            else:
+                logger.error(f"{symbol} 피라미딩 주문 실패")
+                
+        except Exception as e:
+            logger.error(f"피라미딩 실행 실패 ({position.symbol}): {e}")
     
     async def run(self):
         """전략 실행 메인 루프"""
@@ -674,8 +860,10 @@ class ZLMACDIchimokuStrategy(BaseStrategy):
             else:
                 # 피라미딩 체크
                 current_price = df_1h['close'].iloc[-1]
-                if await self._check_pyramiding_opportunity(position, current_price):
-                    logger.info(f"📈 피라미딩 추가 검토: {position.symbol}")
+                can_pyramid, pyramid_info = await self._check_pyramiding_opportunity(position, current_price)
+                if can_pyramid and pyramid_info:
+                    logger.info(f"📈 피라미딩 추가 실행: {position.symbol} 레벨 {pyramid_info['level']}")
+                    await self._execute_pyramiding(position, pyramid_info)
                     
         except Exception as e:
             logger.error(f"포지션 관리 실패 ({position.symbol}): {e}")

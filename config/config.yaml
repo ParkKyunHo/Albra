@@ -185,6 +185,30 @@ performance_tracking:
     confidence_factor: 0.5
     min_trades_required: 20
 
+# 피라미딩 설정 (Enterprise-grade Pyramiding System)
+pyramiding:
+  enabled: false  # 피라미딩 활성화 여부 (기본 비활성화)
+  
+  # 피라미딩 레벨별 진입 조건 (수익률)
+  pyramiding_levels: [0.03, 0.06, 0.09]  # 3%, 6%, 9% 수익에서 추가 진입
+  
+  # 레벨별 포지션 크기 비율 (초기 포지션 대비)
+  pyramiding_size_ratios: [0.75, 0.50, 0.25]  # 75%, 50%, 25%
+  
+  # 피라미딩 타입
+  pyramiding_type: "SCALED"  # FIXED: 고정 크기, SCALED: 점진적 축소, MARTINGALE: 마틴게일(위험)
+  
+  # 청산 방식
+  pyramiding_exit_method: "FIFO"  # FIFO: 선입선출, LIFO: 후입선출, PROPORTIONAL: 비례 청산
+  
+  # 리스크 한도
+  max_pyramiding_per_symbol: 3        # 심볼당 최대 피라미딩 레벨
+  max_total_exposure_ratio: 2.0       # 초기 포지션 대비 최대 노출 비율
+  min_pyramid_interval_seconds: 300   # 피라미딩 간 최소 시간 간격 (5분)
+  
+  # 리스크 관리
+  risk_score_threshold: 70  # 리스크 점수 임계값 (0-100)
+
 # 리스크 패리티 설정 (새로 추가)
 risk_parity:
   enabled: true  # 기본 비활성화 (선택적 기능)

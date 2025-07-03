@@ -39,6 +39,10 @@ class BaseStrategy(ABC):
         # MDD 관리자 (하위 클래스에서 설정)
         self.mdd_manager = None
         
+        # 피라미딩 설정
+        self.pyramiding_enabled = config.get('pyramiding_enabled', False)
+        self.pyramiding_manager = None  # 나중에 시스템에서 주입
+        
     @abstractmethod
     async def check_entry_signal(self, symbol: str, df_4h, df_15m, current_index: int) -> Tuple[bool, Optional[str]]:
         """진입 신호 체크 (구현 필요)"""
@@ -498,3 +502,183 @@ class BaseStrategy(ABC):
         """전략 중지 - async로 변경"""
         self.is_running = False
         logger.info(f"{self.strategy_name} 전략 중지")
+    
+    # === 피라미딩 지원 메서드 ===
+    
+    async def check_pyramiding_opportunity(self, symbol: str, current_price: float) -> Tuple[bool, str]:
+        """피라미딩 기회 체크
+        
+        Returns:
+            Tuple[bool, str]: (가능 여부, 불가능한 경우 이유)
+        """
+        if not self.pyramiding_enabled or not self.pyramiding_manager:
+            return False, "피라미딩 비활성화"
+        
+        position = self.position_manager.get_position(symbol)
+        if not position:
+            return False, "포지션 없음"
+        
+        # 현재 수익률 계산
+        if position.side.upper() == 'LONG':
+            pnl_pct = (current_price - position.entry_price) / position.entry_price
+        else:
+            pnl_pct = (position.entry_price - current_price) / position.entry_price
+        
+        # 손실 중이면 피라미딩 불가
+        if pnl_pct <= 0:
+            return False, f"손실 중 ({pnl_pct:.2%})"
+        
+        # PyramidingManager에서 확인
+        from decimal import Decimal
+        can_add, reason = await self.pyramiding_manager.can_add_pyramiding(
+            symbol, self.strategy_name, Decimal(str(current_price)), pnl_pct
+        )
+        
+        return can_add, reason
+    
+    async def execute_pyramiding(self, symbol: str, size_ratio: float = None) -> bool:
+        """피라미딩 실행
+        
+        Args:
+            symbol: 심볼
+            size_ratio: 크기 비율 (None이면 기본 설정 사용)
+            
+        Returns:
+            bool: 성공 여부
+        """
+        if not self.pyramiding_enabled or not self.pyramiding_manager:
+            logger.warning("피라미딩이 활성화되지 않았거나 매니저가 없음")
+            return False
+        
+        try:
+            # 피라미딩 크기 계산
+            if size_ratio is None:
+                pyramid_info = self.pyramiding_manager.get_pyramiding_info(symbol, self.strategy_name)
+                if pyramid_info:
+                    level = pyramid_info['current_level'] + 1
+                    size_ratios = self.pyramiding_manager.default_size_ratios
+                    size_ratio = float(size_ratios[level]) if level < len(size_ratios) else 0.25
+                else:
+                    size_ratio = 0.75  # 첫 피라미딩
+            
+            # 포지션 크기 계산
+            base_size = await self.calculate_position_size(symbol)
+            pyramid_size = base_size * size_ratio
+            
+            if pyramid_size <= 0:
+                logger.error(f"유효하지 않은 피라미딩 크기: {pyramid_size}")
+                return False
+            
+            # 심볼별 정밀도 적용
+            pyramid_size = await self.binance_api.round_quantity(symbol, pyramid_size)
+            
+            # 최소 주문 금액 체크
+            current_price = await self.binance_api.get_current_price(symbol)
+            min_notional = 10.0  # USDT
+            if pyramid_size * current_price < min_notional:
+                logger.warning(f"피라미딩 금액이 최소값 미만: ${pyramid_size * current_price:.2f}")
+                return False
+            
+            # 현재 포지션 정보
+            position = self.position_manager.get_position(symbol)
+            if not position:
+                logger.error(f"포지션을 찾을 수 없음: {symbol}")
+                return False
+            
+            # 레버리지 설정
+            await self.binance_api.set_leverage(symbol, self.leverage)
+            
+            # 주문 실행
+            side = 'BUY' if position.side.upper() == 'LONG' else 'SELL'
+            order = await self.binance_api.place_order(
+                symbol=symbol,
+                side=side,
+                quantity=pyramid_size,
+                order_type='MARKET'
+            )
+            
+            if not order:
+                logger.error(f"피라미딩 주문 실행 실패: {symbol}")
+                return False
+            
+            # 체결가 확인
+            entry_price = 0.0
+            if 'avgPrice' in order and order['avgPrice']:
+                entry_price = float(order['avgPrice'])
+            elif 'fills' in order and order['fills']:
+                total_qty = 0
+                total_value = 0
+                for fill in order['fills']:
+                    fill_qty = float(fill['qty'])
+                    fill_price = float(fill['price'])
+                    total_qty += fill_qty
+                    total_value += fill_qty * fill_price
+                if total_qty > 0:
+                    entry_price = total_value / total_qty
+            else:
+                entry_price = current_price
+            
+            # PyramidingManager에 초기화 또는 추가
+            from decimal import Decimal
+            pyramid_info = self.pyramiding_manager.get_pyramiding_info(symbol, self.strategy_name)
+            
+            if not pyramid_info:
+                # 초기 포지션으로 초기화
+                await self.pyramiding_manager.initialize_position(symbol, self.strategy_name, position)
+            
+            # 피라미딩 추가
+            sub_position = await self.pyramiding_manager.add_pyramiding(
+                symbol=symbol,
+                strategy_name=self.strategy_name,
+                size=Decimal(str(pyramid_size)),
+                entry_price=Decimal(str(entry_price))
+            )
+            
+            if sub_position:
+                # 포지션 매니저 업데이트 (전체 크기)
+                new_total_size = position.size + pyramid_size
+                await self.position_manager.update_position_size(symbol, new_total_size)
+                
+                logger.info(f"🔺 피라미딩 성공: {symbol} 레벨 {sub_position.level}, "
+                          f"크기 {pyramid_size} @ {entry_price:.2f}")
+                
+                # 알림 전송 (있다면)
+                if hasattr(self, 'notification_manager') and self.notification_manager:
+                    pyramid_info = self.pyramiding_manager.get_pyramiding_info(symbol, self.strategy_name)
+                    self.notification_manager.send_notification(
+                        f"🔺 피라미딩 추가\n"
+                        f"심볼: {symbol}\n"
+                        f"레벨: {sub_position.level}/{self.pyramiding_manager.max_pyramiding_per_symbol}\n"
+                        f"크기: {pyramid_size}\n"
+                        f"진입가: {entry_price:.2f}\n"
+                        f"평균가: {pyramid_info['average_price']:.2f}\n"
+                        f"전체 크기: {pyramid_info['total_size']}",
+                        priority='MEDIUM'
+                    )
+                
+                return True
+            else:
+                logger.error("피라미딩 매니저 추가 실패")
+                return False
+                
+        except Exception as e:
+            logger.error(f"피라미딩 실행 실패: {e}")
+            return False
+    
+    async def check_and_execute_pyramiding(self, symbol: str, current_price: float) -> bool:
+        """피라미딩 체크 및 실행 (편의 메서드)"""
+        can_pyramid, reason = await self.check_pyramiding_opportunity(symbol, current_price)
+        
+        if can_pyramid:
+            logger.info(f"🔺 피라미딩 기회 감지: {symbol}")
+            return await self.execute_pyramiding(symbol)
+        else:
+            logger.debug(f"피라미딩 불가: {symbol} - {reason}")
+            return False
+    
+    def get_pyramiding_info(self, symbol: str) -> Optional[Dict]:
+        """피라미딩 정보 조회"""
+        if not self.pyramiding_manager:
+            return None
+        
+        return self.pyramiding_manager.get_pyramiding_info(symbol, self.strategy_name)
