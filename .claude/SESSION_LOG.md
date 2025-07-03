@@ -123,6 +123,9 @@
 - 2025-07-03 20:20:12 KST: [1721cde] fix: 멀티 계좌 서비스 파일에 --mode multi 옵션 추가
   - .claude/: SESSION_LOG.md
 
+- 2025-07-03 20:30:03 KST: [f1d2e54] cleanup: 프로젝트 루트 정리 - 백테스트 및 임시 파일 archive로 이동
+  - .claude/: SESSION_LOG.md, settings.local.json
+
 ### 추가 작업 (2025-07-03)
 - TFPE 전략 완전 분석 수행
   - 독립 실행 확인 (Momentum 전략과 별개)

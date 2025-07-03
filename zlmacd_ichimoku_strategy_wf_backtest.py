@@ -69,7 +69,7 @@ class ZLMACDIchimokuStrategy:
         self.daily_loss = 0  # 오늘의 누적 손실
         self.last_trade_date = None  # 마지막 거래 날짜
         self.trading_suspended_until = None  # 거래 재개 시간
-        self.initial_stop_loss = 0.02  # 초기 타이트한 손절 2%로 강화
+        self.initial_stop_loss = 0.015  # 초기 타이트한 손절 1.5%로 더욱 강화
         self.trailing_stop_active = False  # 트레일링 스톱 활성화 여부
         self.trailing_stop_price = None  # 트레일링 스톱 가격
         self.highest_price = None  # 포지션 보유 중 최고가
@@ -106,7 +106,7 @@ class ZLMACDIchimokuStrategy:
         self.chikou_shift = 26
         self.cloud_shift = 26
         
-        self.leverage = 8  # 레버리지 15배로 조정
+        self.leverage = 10  # 레버리지 10배로 상향 조정
         self.max_position_loss_pct = 0.08  # 포지션당 최대 손실 8%로 축소
         
         # ATR 계산 및 저장
@@ -141,10 +141,10 @@ class ZLMACDIchimokuStrategy:
         print(f"  • Position Sizing: Half Kelly Criterion (5-20% of capital, start 10%)")
         print(f"  • Entry: ZL MACD cross + Price above/below cloud + Tenkan/Kijun cross")
         print(f"  • Max Position Loss: {self.max_position_loss_pct*100:.0f}% (Full Exit)")
-        print(f"  • Stop Loss: ATR-based dynamic stop (1.5*ATR, max 2%), then trailing stop")
+        print(f"  • Stop Loss: ATR-based dynamic stop (1.2*ATR, max 1.5%), then trailing stop")
         print(f"  • Trailing Stop: Activates at 3% profit, trails by 10% from peak")
         print(f"  • Daily Loss Limit: {self.daily_loss_limit*100:.0f}% (24h suspension if exceeded)")
-        print(f"  • Pyramiding: 3 levels at 3%, 6%, 9% profit")
+        print(f"  • Pyramiding: 3 levels at 4%, 6%, 9% profit")
         print(f"  • Trading Costs: {self.slippage*100:.1f}% slippage, {self.commission*100:.2f}% commission")
         print(f"  • Market Filter: ADX > 25 required for entry")
         print(f"  • Consecutive Loss Adjustment: 3+ losses→70%, 5+ losses→50%, 7+ losses→30%")
@@ -373,6 +373,18 @@ class ZLMACDIchimokuStrategy:
         """필터: 모든 신호에서 거래"""
         return True
     
+    def calculate_dynamic_slippage(self, current_price: float) -> float:
+        """ATR 기반 동적 슬리피지 계산"""
+        if self.current_atr is None:
+            return self.slippage
+        
+        # ATR이 가격의 2%보다 크면 슬리피지 증가
+        volatility_factor = self.current_atr / (current_price * 0.02)
+        dynamic_slippage = self.slippage * max(1.0, volatility_factor)
+        
+        # 최대 슬리피지는 원래의 3배로 제한
+        return min(dynamic_slippage, self.slippage * 3.0)
+    
 
     
 
@@ -452,8 +464,10 @@ class ZLMACDIchimokuStrategy:
                 long_conditions = self.check_entry_conditions(df, i, 'LONG')
                 if long_conditions['can_enter'] and self.should_take_trade():
                     entry_price = df['open'].iloc[i]
-                    # 슬리피지 적용
-                    entry_price = entry_price * (1 + self.slippage)
+                    
+                    # 동적 슬리피지 계산 및 적용
+                    dynamic_slippage = self.calculate_dynamic_slippage(current_price)
+                    entry_price = entry_price * (1 + dynamic_slippage)
                     self.enter_position('LONG', entry_price, current_time, i)
                     entry_signals += 1
                     long_entries += 1
@@ -463,8 +477,10 @@ class ZLMACDIchimokuStrategy:
                 short_conditions = self.check_entry_conditions(df, i, 'SHORT')
                 if short_conditions['can_enter'] and self.should_take_trade():
                     entry_price = df['open'].iloc[i]
-                    # 슬리피지 적용 (숏의 경우 불리하게)
-                    entry_price = entry_price * (1 - self.slippage)
+                    
+                    # 동적 슬리피지 계산 및 적용 (숏의 경우 불리하게)
+                    dynamic_slippage = self.calculate_dynamic_slippage(current_price)
+                    entry_price = entry_price * (1 - dynamic_slippage)
                     self.enter_position('SHORT', entry_price, current_time, i)
                     entry_signals += 1
                     short_entries += 1
@@ -499,7 +515,7 @@ class ZLMACDIchimokuStrategy:
                 
                 # ATR 기반 동적 손절 계산
                 if self.current_atr and current_price > 0:
-                    dynamic_stop_loss = min(0.02, 1.5 * self.current_atr / self.position['entry_price'])
+                    dynamic_stop_loss = min(0.015, 1.2 * self.current_atr / self.position['entry_price'])
                 else:
                     dynamic_stop_loss = self.initial_stop_loss
                 
@@ -519,28 +535,32 @@ class ZLMACDIchimokuStrategy:
                 if self.trailing_stop_active and low <= self.trailing_stop_price:
                     # 트레일링 스톱 히트
                     exit_price = min(self.trailing_stop_price, df['open'].iloc[i])
-                    exit_price = exit_price * (1 - self.slippage)
+                    dynamic_slippage = self.calculate_dynamic_slippage(current_price)
+                    exit_price = exit_price * (1 - dynamic_slippage)
                     self.exit_position(exit_price, current_time, i, 'TRAILING_STOP')
                 elif not self.trailing_stop_active:
                     # ATR 기반 동적 초기 손절
                     price_change_pct = (low / self.position['entry_price'] - 1)
                     if price_change_pct <= -dynamic_stop_loss:
                         exit_price = min(self.position['entry_price'] * (1 - dynamic_stop_loss), df['open'].iloc[i])
-                        exit_price = exit_price * (1 - self.slippage)
+                        dynamic_slippage = self.calculate_dynamic_slippage(current_price)
+                        exit_price = exit_price * (1 - dynamic_slippage)
                         self.exit_position(exit_price, current_time, i, f'STOP_LOSS_{dynamic_stop_loss*100:.1f}PCT')
                 
                 # ZL MACD + Ichimoku 종료 조건 확인
                 exit_conditions = self.check_exit_conditions(df, i, 'LONG')
                 if exit_conditions['should_exit']:
                     exit_price = df['open'].iloc[i]
-                    # 슬리피지 적용
-                    exit_price = exit_price * (1 - self.slippage)
+                    # 동적 슬리피지 적용
+                    dynamic_slippage = self.calculate_dynamic_slippage(current_price)
+                    exit_price = exit_price * (1 - dynamic_slippage)
                     self.exit_position(exit_price, current_time, i, exit_conditions['exit_type'])
                 # 피라미딩 기회 체크
                 elif self.check_pyramiding_opportunity('LONG', high, df, i):
                     pyramid_price = max(high, df['open'].iloc[i])
-                    # 슬리피지 적용
-                    pyramid_price = pyramid_price * (1 + self.slippage)
+                    # 동적 슬리피지 적용
+                    dynamic_slippage = self.calculate_dynamic_slippage(current_price)
+                    pyramid_price = pyramid_price * (1 + dynamic_slippage)
                     self.add_pyramiding_position('LONG', pyramid_price, current_time, i)
             
             # 숏 포지션일 때
@@ -568,7 +588,7 @@ class ZLMACDIchimokuStrategy:
                 
                 # ATR 기반 동적 손절 계산
                 if self.current_atr and current_price > 0:
-                    dynamic_stop_loss = min(0.02, 1.5 * self.current_atr / self.position['entry_price'])
+                    dynamic_stop_loss = min(0.015, 1.2 * self.current_atr / self.position['entry_price'])
                 else:
                     dynamic_stop_loss = self.initial_stop_loss
                 
@@ -588,29 +608,62 @@ class ZLMACDIchimokuStrategy:
                 if self.trailing_stop_active and high >= self.trailing_stop_price:
                     # 트레일링 스톱 히트
                     exit_price = max(self.trailing_stop_price, df['open'].iloc[i])
-                    exit_price = exit_price * (1 + self.slippage)
+                    dynamic_slippage = self.calculate_dynamic_slippage(current_price)
+                    exit_price = exit_price * (1 + dynamic_slippage)
                     self.exit_position(exit_price, current_time, i, 'TRAILING_STOP')
                 elif not self.trailing_stop_active:
                     # ATR 기반 동적 초기 손절
                     price_change_pct = (self.position['entry_price'] / high - 1)
                     if price_change_pct <= -dynamic_stop_loss:
                         exit_price = max(self.position['entry_price'] * (1 + dynamic_stop_loss), df['open'].iloc[i])
-                        exit_price = exit_price * (1 + self.slippage)
+                        dynamic_slippage = self.calculate_dynamic_slippage(current_price)
+                        exit_price = exit_price * (1 + dynamic_slippage)
                         self.exit_position(exit_price, current_time, i, f'STOP_LOSS_{dynamic_stop_loss*100:.1f}PCT')
                 
                 # ZL MACD + Ichimoku 종료 조건 확인
                 exit_conditions = self.check_exit_conditions(df, i, 'SHORT')
                 if exit_conditions['should_exit']:
                     exit_price = df['open'].iloc[i]
-                    # 슬리피지 적용
-                    exit_price = exit_price * (1 + self.slippage)
+                    # 동적 슬리피지 적용
+                    dynamic_slippage = self.calculate_dynamic_slippage(current_price)
+                    exit_price = exit_price * (1 + dynamic_slippage)
                     self.exit_position(exit_price, current_time, i, exit_conditions['exit_type'])
                 # 피라미딩 기회 체크
                 elif self.check_pyramiding_opportunity('SHORT', low, df, i):
                     pyramid_price = min(low, df['open'].iloc[i])
-                    # 슬리피지 적용
-                    pyramid_price = pyramid_price * (1 - self.slippage)
+                    # 동적 슬리피지 적용
+                    dynamic_slippage = self.calculate_dynamic_slippage(current_price)
+                    pyramid_price = pyramid_price * (1 - dynamic_slippage)
                     self.add_pyramiding_position('SHORT', pyramid_price, current_time, i)
+            
+            # 펀딩 비용 적용 (포지션이 있을 때만)
+            if self.position is not None:
+                # 실제 바이낸스 펀딩은 8시간마다 적용되지만, 백테스트에서는 시간당 비율로 계산
+                # 8시간당 0.01% = 시간당 0.00125%
+                hourly_funding_rate = 0.0001 / 8  # 0.00125%
+                
+                # 타임프레임별 펀딩 비용 계산
+                if self.timeframe == '4h':
+                    # 4시간마다
+                    funding_rate = hourly_funding_rate * 4
+                elif self.timeframe == '1h':
+                    # 1시간마다
+                    funding_rate = hourly_funding_rate
+                elif self.timeframe == '15m':
+                    # 15분마다 (0.25시간)
+                    funding_rate = hourly_funding_rate * 0.25
+                else:
+                    funding_rate = 0
+                
+                # 메인 포지션의 펀딩 비용
+                funding_cost = self.position['leveraged_value'] * funding_rate
+                
+                # 피라미딩 포지션의 펀딩 비용
+                for pyramid in self.pyramiding_positions:
+                    funding_cost += pyramid['leveraged_value'] * funding_rate
+                
+                # 자본에서 펀딩 비용 차감
+                self.capital -= funding_cost
             
             # 자산 기록
             current_equity = self.calculate_equity(current_price)
@@ -722,8 +775,8 @@ class ZLMACDIchimokuStrategy:
         pyramid_levels = len(self.pyramiding_positions)
         
         if pyramid_levels == 0:
-            # 첫 번째 피라미딩: 3% 가격 상승 (하향 조정)
-            return current_pnl_pct >= 3.0
+            # 첫 번째 피라미딩: 4% 가격 상승 (상향 조정하여 더 확실한 추세에서만 추가)
+            return current_pnl_pct >= 4.0
         elif pyramid_levels == 1:
             # 두 번째 피라미딩: 6% 가격 상승
             return current_pnl_pct >= 6.0
@@ -764,6 +817,10 @@ class ZLMACDIchimokuStrategy:
         }
         
         # 피라미딩 포지션에는 개별 손절 설정하지 않음 (메인 포지션과 함께 관리)
+        
+        # 수수료 차감 (레버리지 포지션 전체에 대해 적용)
+        commission_cost = actual_pyramid_size * self.commission
+        self.capital -= commission_cost
         
         self.pyramiding_positions.append(pyramid_position)
         print(f"    Pyramiding Level {len(self.pyramiding_positions)}: {position_type} at {price:.2f} (Size: {pyramid_size/self.original_position_value*100:.0f}%)")
@@ -816,8 +873,8 @@ class ZLMACDIchimokuStrategy:
         actual_position_size = position_size * self.leverage
         shares = actual_position_size / price
         
-        # 수수료 차감
-        commission_cost = position_size * self.commission
+        # 수수료 차감 (레버리지 포지션 전체에 대해 적용)
+        commission_cost = actual_position_size * self.commission
         self.capital -= commission_cost
         
         self.position = {
@@ -947,10 +1004,10 @@ class ZLMACDIchimokuStrategy:
             pyramid_pnl = pyramid['position_value'] * pyramid_change_pct * self.leverage
             total_pnl += pyramid_pnl
         
-        # 수수료 차감
-        commission_cost = self.position['position_value'] * self.commission
+        # 수수료 차감 (레버리지 포지션 전체에 대해 적용)
+        commission_cost = self.position['leveraged_value'] * self.commission
         for pyramid in self.pyramiding_positions:
-            commission_cost += pyramid['position_value'] * self.commission
+            commission_cost += pyramid['leveraged_value'] * self.commission
         
         # 전체 손익으로 자본 업데이트 (수수료 차감 후)
         net_pnl = total_pnl - commission_cost
@@ -1057,31 +1114,62 @@ class ZLMACDIchimokuWalkForward:
         print(f"  Cache directory: {self.cache_dir}")
         print(f"  Results cache directory: {self.results_cache_dir}")
         
-        # 분석 기간
-        self.periods = [
-            # 2021년
-            {"name": "2021_Q1", "test_start": "2021-01-01", "test_end": "2021-03-31"},
-            {"name": "2021_Q2", "test_start": "2021-04-01", "test_end": "2021-06-30"},
-            {"name": "2021_Q3", "test_start": "2021-07-01", "test_end": "2021-09-30"},
-            {"name": "2021_Q4", "test_start": "2021-10-01", "test_end": "2021-12-31"},
-            # 2022년
-            {"name": "2022_Q1", "test_start": "2022-01-01", "test_end": "2022-03-31"},
-            {"name": "2022_Q2", "test_start": "2022-04-01", "test_end": "2022-06-30"},
-            {"name": "2022_Q3", "test_start": "2022-07-01", "test_end": "2022-09-30"},
-            {"name": "2022_Q4", "test_start": "2022-10-01", "test_end": "2022-12-31"},
-            # 2023년
-            {"name": "2023_Q1", "test_start": "2023-01-01", "test_end": "2023-03-31"},
-            {"name": "2023_Q2", "test_start": "2023-04-01", "test_end": "2023-06-30"},
-            {"name": "2023_Q3", "test_start": "2023-07-01", "test_end": "2023-09-30"},
-            {"name": "2023_Q4", "test_start": "2023-10-01", "test_end": "2023-12-31"},
-            # 2024년
-            {"name": "2024_Q1", "test_start": "2024-01-01", "test_end": "2024-03-31"},
-            {"name": "2024_Q2", "test_start": "2024-04-01", "test_end": "2024-06-30"},
-            {"name": "2024_Q3", "test_start": "2024-07-01", "test_end": "2024-09-30"},
-            {"name": "2024_Q4", "test_start": "2024-10-01", "test_end": "2024-12-31"},
-            # 2025년 Q1
-            {"name": "2025_Q1", "test_start": "2025-01-01", "test_end": "2025-03-31"},
-        ]
+        # Walk-Forward 분석 기간 (12개월 training + 3개월 test)
+        self.periods = []
+        
+        # 2020년 1월부터 시작하여 3개월씩 슬라이딩
+        start_year = 2020
+        start_month = 1
+        
+        for i in range(17):  # 약 17개의 window
+            # Training 시작일
+            train_start_year = start_year + (start_month - 1 + i * 3) // 12
+            train_start_month = ((start_month - 1 + i * 3) % 12) + 1
+            
+            # Training 종료일 (12개월 후)
+            train_end_year = train_start_year + 1
+            train_end_month = train_start_month - 1
+            if train_end_month == 0:
+                train_end_month = 12
+                train_end_year -= 1
+                
+            # Test 시작일 (Training 종료 다음날)
+            test_start_year = train_end_year
+            test_start_month = train_end_month + 1
+            if test_start_month > 12:
+                test_start_month = 1
+                test_start_year += 1
+                
+            # Test 종료일 (3개월 후)
+            test_end_year = test_start_year
+            test_end_month = test_start_month + 2
+            if test_end_month > 12:
+                test_end_month = test_end_month - 12
+                test_end_year += 1
+                
+            # 2025년 3월을 넘어가면 중단
+            if test_end_year > 2025 or (test_end_year == 2025 and test_end_month > 3):
+                break
+                
+            # 마지막 날 계산
+            import calendar
+            train_end_day = calendar.monthrange(train_end_year, train_end_month)[1]
+            test_end_day = calendar.monthrange(test_end_year, test_end_month)[1]
+            
+            window = {
+                "name": f"WF_{i+1:02d}",
+                "training_start": f"{train_start_year}-{train_start_month:02d}-01",
+                "training_end": f"{train_end_year}-{train_end_month:02d}-{train_end_day:02d}",
+                "test_start": f"{test_start_year}-{test_start_month:02d}-01",
+                "test_end": f"{test_end_year}-{test_end_month:02d}-{test_end_day:02d}"
+            }
+            
+            self.periods.append(window)
+        
+        print(f"\n✅ Walk-Forward periods initialized: {len(self.periods)} windows")
+        print(f"  • Training period: 12 months")
+        print(f"  • Test period: 3 months")
+        print(f"  • Sliding interval: 3 months")
         
         self.all_results = []
         
@@ -1093,26 +1181,31 @@ class ZLMACDIchimokuWalkForward:
         print(f"  • Exit: Cloud break or Kijun touch")
         print(f"  • Filter: ADX > 25 for trending markets")
     
-    def run_backtest(self, period: Dict) -> Dict:
-        """ZL MACD + Ichimoku 전략으로 백테스트 실행"""
+    def run_walk_forward_window(self, period: Dict) -> Dict:
+        """Walk-Forward 분석의 한 window 실행 (training + test)"""
         try:
-            # 데이터 로드
-            print(f"  Loading data for {period['name']}...")
-            data_fetcher = DataFetcherFixed()
+            print(f"\n{'='*60}")
+            print(f"  Window {period['name']}")
+            print(f"  Training: {period['training_start']} to {period['training_end']}")
+            print(f"  Test: {period['test_start']} to {period['test_end']}")
+            print(f"{'='*60}")
             
-            # ccxt 직접 사용하여 데이터 로드
-            print(f"  Fetching {self.timeframe} data...")
+            # 데이터 로드
+            data_fetcher = DataFetcherFixed()
             exchange = data_fetcher.exchange
             
-            start_dt = pd.to_datetime(period['test_start'])
-            end_dt = pd.to_datetime(period['test_end'])
+            # Training과 Test 기간을 모두 포함하는 데이터 로드
+            train_start_dt = pd.to_datetime(period['training_start'])
+            test_end_dt = pd.to_datetime(period['test_end'])
             
-            # 채널 계산을 위해 추가 데이터 필요
-            extended_start_dt = start_dt - timedelta(days=35)  # 5주 전부터
+            # 지표 계산을 위해 추가 데이터 필요
+            extended_start_dt = train_start_dt - timedelta(days=60)  # 2개월 전부터
             since = int(extended_start_dt.timestamp() * 1000)
             
+            print(f"  Loading data from {extended_start_dt.date()} to {test_end_dt.date()}")
+            
             all_data = []
-            while since < int(end_dt.timestamp() * 1000):
+            while since < int(test_end_dt.timestamp() * 1000):
                 try:
                     time.sleep(0.5)  # Rate limit
                     ohlcv = exchange.fetch_ohlcv(self.symbol, self.timeframe, since=since, limit=1000)
@@ -1125,7 +1218,7 @@ class ZLMACDIchimokuWalkForward:
                     break
             
             if not all_data:
-                print(f"  Failed to load {self.timeframe} data for {period['name']}")
+                print(f"  Failed to load data for {period['name']}")
                 return None
             
             # DataFrame 생성
@@ -1136,69 +1229,155 @@ class ZLMACDIchimokuWalkForward:
             
             print(f"  Loaded {len(df)} {self.timeframe} candles")
             
-            if df.empty:
-                print(f"  No data in specified period")
+            # Training 기간 데이터 필터링
+            train_end_dt = pd.to_datetime(period['training_end'])
+            df_train_full = df[df.index <= train_end_dt].copy()
+            df_train = df[(df.index >= train_start_dt) & (df.index <= train_end_dt)].copy()
+            
+            # Test 기간 데이터 필터링
+            test_start_dt = pd.to_datetime(period['test_start'])
+            
+            # Look-ahead bias 제거: Test 백테스트용 데이터는 test 시작 52일 전부터만 포함
+            # Ichimoku 계산에 필요한 최소 데이터만 포함
+            test_lookback_start = test_start_dt - timedelta(days=52)
+            df_test_with_lookback = df[(df.index >= test_lookback_start) & (df.index <= test_end_dt)].copy()
+            df_test = df[(df.index >= test_start_dt) & (df.index <= test_end_dt)].copy()
+            
+            if df_train.empty or df_test.empty:
+                print(f"  No data in training or test period")
                 return None
             
-            # ZL MACD + Ichimoku 전략 초기화
-            strategy = ZLMACDIchimokuStrategy(self.initial_capital, self.timeframe, self.symbol)
+            print(f"  Training data: {len(df_train)} candles ({df_train.index[0].date()} to {df_train.index[-1].date()})")
+            print(f"  Test data: {len(df_test)} candles ({df_test.index[0].date()} to {df_test.index[-1].date()})")
             
-            # 백테스트 실행
-            print(f"  Running ZL MACD + Ichimoku backtest...")
-            results = strategy.run_backtest(df)
+            # 1. Training 기간 백테스트
+            print(f"\n  Running TRAINING period backtest...")
+            strategy_train = ZLMACDIchimokuStrategy(self.initial_capital, self.timeframe, self.symbol)
+            results_train = strategy_train.run_backtest(df_train_full)
             
-            # 실제 거래 기간의 데이터만 필터링
-            df_period = df[(df.index >= start_dt) & (df.index <= end_dt)]
+            # Training 기간의 거래만 필터링
+            trades_train = results_train.get('trades_df', pd.DataFrame())
+            if not trades_train.empty:
+                trades_train = trades_train[
+                    (pd.to_datetime(trades_train['entry_time']) >= train_start_dt) &
+                    (pd.to_datetime(trades_train['exit_time']) <= train_end_dt)
+                ]
+            
+            # 2. Test 기간 백테스트 (동일한 파라미터 사용)
+            print(f"  Running TEST period backtest...")
+            strategy_test = ZLMACDIchimokuStrategy(self.initial_capital, self.timeframe, self.symbol)
+            # Look-ahead bias 제거: df_test_full 대신 df_test_with_lookback 사용
+            results_test = strategy_test.run_backtest(df_test_with_lookback)
+            
+            # Test 기간의 거래만 필터링
+            trades_test = results_test.get('trades_df', pd.DataFrame())
+            if not trades_test.empty:
+                trades_test = trades_test[
+                    (pd.to_datetime(trades_test['entry_time']) >= test_start_dt) &
+                    (pd.to_datetime(trades_test['exit_time']) <= test_end_dt)
+                ]
             
             # 성능 지표 계산
-            trades_df = results.get('trades_df', pd.DataFrame())
-            equity_df = results.get('equity_df', pd.DataFrame())
-            
-            # 샤프 비율 계산
-            if not equity_df.empty:
+            def calculate_metrics(equity_df, timeframe):
+                if equity_df.empty:
+                    return 0, 0
+                    
                 returns = equity_df['capital'].pct_change().dropna()
-                if self.timeframe == '4h':
+                if timeframe == '4h':
                     annual_factor = np.sqrt(365 * 6)
-                elif self.timeframe == '1h':
+                elif timeframe == '1h':
                     annual_factor = np.sqrt(365 * 24)
                 else:  # 15m
                     annual_factor = np.sqrt(365 * 96)
                     
-                sharpe_ratio = annual_factor * returns.mean() / returns.std() if returns.std() > 0 else 0
-            else:
-                sharpe_ratio = 0
-            
-            # 최대 손실 계산
-            if not equity_df.empty:
+                sharpe = annual_factor * returns.mean() / returns.std() if returns.std() > 0 else 0
+                
                 equity_curve = equity_df['capital'].values
                 peak = np.maximum.accumulate(equity_curve)
                 drawdown = (equity_curve - peak) / peak * 100
-                max_drawdown = abs(drawdown.min())
-            else:
-                max_drawdown = 0
+                max_dd = abs(drawdown.min()) if len(drawdown) > 0 else 0
+                
+                return sharpe, max_dd
+            
+            # Training 메트릭
+            train_sharpe, train_max_dd = calculate_metrics(
+                results_train.get('equity_df', pd.DataFrame()), 
+                self.timeframe
+            )
+            
+            # Test 메트릭
+            test_sharpe, test_max_dd = calculate_metrics(
+                results_test.get('equity_df', pd.DataFrame()), 
+                self.timeframe
+            )
+            
+            # Walk-Forward 효율성 계산
+            efficiency_ratio = results_test['total_return'] / results_train['total_return'] if results_train['total_return'] != 0 else 0
+            
+            # 과적합 점수 계산 (0-100, 낮을수록 좋음)
+            overfitting_score = abs(results_train['total_return'] - results_test['total_return'])
+            if train_sharpe != 0:
+                overfitting_score += abs(train_sharpe - test_sharpe) * 10
+            
+            # 결과 요약 출력
+            print(f"\n  {'='*50}")
+            print(f"  TRAINING Results:")
+            print(f"    Return: {results_train['total_return']:.2f}%")
+            print(f"    Sharpe: {train_sharpe:.2f}")
+            print(f"    Max DD: {train_max_dd:.2f}%")
+            print(f"    Trades: {len(trades_train)}")
+            print(f"    Win Rate: {results_train['win_rate']:.1f}%")
+            
+            print(f"\n  TEST Results:")
+            print(f"    Return: {results_test['total_return']:.2f}%")
+            print(f"    Sharpe: {test_sharpe:.2f}")
+            print(f"    Max DD: {test_max_dd:.2f}%")
+            print(f"    Trades: {len(trades_test)}")
+            print(f"    Win Rate: {results_test['win_rate']:.1f}%")
+            
+            print(f"\n  Walk-Forward Metrics:")
+            print(f"    Efficiency Ratio: {efficiency_ratio:.2f}")
+            print(f"    Overfitting Score: {overfitting_score:.1f}")
+            print(f"  {'='*50}")
             
             # 결과 포맷팅
             result = {
-                'period': period['name'],
-                'return': results['total_return'],
-                'sharpe': sharpe_ratio,
-                'win_rate': results['win_rate'],
-                'max_dd': max_drawdown,
-                'trades': results['total_trades'],
-                'trades_df': trades_df,
-                'equity_df': equity_df,
-                'df': df_period,
-                'final_capital': results['final_capital'],
-                'avg_win': results['avg_win'],
-                'avg_loss': results['avg_loss'],
-                'consecutive_losses': results['consecutive_losses'],
-                'filtered_ratio': results['filtered_ratio']
+                'window': period['name'],
+                'training_period': f"{period['training_start']} to {period['training_end']}",
+                'test_period': f"{period['test_start']} to {period['test_end']}",
+                
+                # Training 결과
+                'training_return': results_train['total_return'],
+                'training_sharpe': train_sharpe,
+                'training_win_rate': results_train['win_rate'],
+                'training_max_dd': train_max_dd,
+                'training_trades': len(trades_train),
+                'training_trades_df': trades_train,
+                'training_final_capital': results_train['final_capital'],
+                
+                # Test 결과
+                'test_return': results_test['total_return'],
+                'test_sharpe': test_sharpe,
+                'test_win_rate': results_test['win_rate'],
+                'test_max_dd': test_max_dd,
+                'test_trades': len(trades_test),
+                'test_trades_df': trades_test,
+                'test_final_capital': results_test['final_capital'],
+                
+                # Walk-Forward 메트릭
+                'efficiency_ratio': efficiency_ratio,
+                'overfitting_score': overfitting_score,
+                'consistency': 1 if results_test['total_return'] > 0 and results_train['total_return'] > 0 else 0,
+                
+                # 데이터
+                'df_train': df_train,
+                'df_test': df_test
             }
             
             return result
             
         except Exception as e:
-            print(f"  ❌ Error in backtest for {period['name']}: {e}")
+            print(f"  ❌ Error in walk-forward window {period['name']}: {e}")
             print(f"  Error type: {type(e).__name__}")
             import traceback
             traceback.print_exc()
@@ -1442,20 +1621,19 @@ class ZLMACDIchimokuWalkForward:
         failed_periods = []
         
         for period in self.periods:
-            print(f"\nProcessing {period['name']}...")
-            result = self.run_backtest(period)
+            print(f"\nProcessing Window {period['name']}...")
+            result = self.run_walk_forward_window(period)
             
             if result:
                 results.append(result)
                 self.all_results.append(result)
                 successful_periods += 1
                 
-                # 성과 출력
-                print(f"  ✓ Completed: Return={result['return']:.2f}%, " +
-                      f"Sharpe={result['sharpe']:.2f}, " +
-                      f"Win Rate={result['win_rate']:.1f}%, " +
-                      f"Trades={result['trades']}, " +
-                      f"Filtered={result.get('filtered_ratio', 0):.0f}%")
+                # Walk-Forward 성과 출력
+                print(f"  ✓ Completed: Training Return={result['training_return']:.2f}%, " +
+                      f"Test Return={result['test_return']:.2f}%, " +
+                      f"Efficiency={result['efficiency_ratio']:.2f}, " +
+                      f"Overfitting Score={result['overfitting_score']:.1f}")
                 
                 # 거래 차트는 나중에 한 번에 표시하기 위해 저장만
                 try:
@@ -1493,29 +1671,149 @@ class ZLMACDIchimokuWalkForward:
         print("\n1. Cumulative Performance Chart")
         self.plot_cumulative_performance(results)
         
-        # 2. 각 분기별 차트 표시
-        print("\n2. Quarterly Trading Charts")
-        for i, result in enumerate(results, 1):
-            print(f"\n   [{i}/{len(results)}] {result['period']}")
-            try:
-                self.plot_quarter_with_trades(result, show=True)
-            except Exception as e:
-                print(f"   Failed to display chart for {result['period']}: {e}")
+        # 2. Walk-Forward 효율성 차트
+        print("\n2. Walk-Forward Efficiency Analysis")
+        self.plot_walk_forward_efficiency(results)
+        
+        # 3. 상세 윈도우별 성과 (옵션)
+        # 너무 많은 차트가 표시되므로 주석 처리
+        # for i, result in enumerate(results, 1):
+        #     print(f"\n   [{i}/{len(results)}] {result['window']}")
+        #     try:
+        #         self.plot_window_analysis(result, show=True)
+        #     except Exception as e:
+        #         print(f"   Failed to display chart for {result['window']}: {e}")
         
         print("\n✅ All charts displayed")
+    
+    def plot_walk_forward_efficiency(self, results: List[Dict], show: bool = True):
+        """Walk-Forward 효율성 분석 차트"""
+        fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(16, 12))
+        
+        windows = [r['window'] for r in results]
+        x = np.arange(len(windows))
+        
+        # 1. Efficiency Ratio 추이
+        efficiency_ratios = [r['efficiency_ratio'] for r in results]
+        
+        colors = ['green' if 0.5 <= er <= 1.5 else 'orange' if 0.3 <= er <= 2.0 else 'red' 
+                 for er in efficiency_ratios]
+        
+        ax1.bar(x, efficiency_ratios, color=colors, alpha=0.7)
+        ax1.axhline(y=1.0, color='black', linestyle='--', alpha=0.5, label='Perfect Efficiency')
+        ax1.axhline(y=0.5, color='red', linestyle='--', alpha=0.3, label='Min Acceptable')
+        ax1.axhline(y=1.5, color='red', linestyle='--', alpha=0.3, label='Max Acceptable')
+        
+        ax1.set_xlabel('Walk-Forward Window')
+        ax1.set_ylabel('Efficiency Ratio')
+        ax1.set_title('Walk-Forward Efficiency Ratio (Test Return / Training Return)')
+        ax1.set_xticks(x)
+        ax1.set_xticklabels(windows, rotation=45)
+        ax1.legend()
+        ax1.grid(True, alpha=0.3)
+        
+        # 2. Consistency Analysis
+        consistency_scores = [r['consistency'] for r in results]
+        test_returns = [r['test_return'] for r in results]
+        
+        ax2_twin = ax2.twinx()
+        
+        line1 = ax2.plot(x, consistency_scores, 'bo-', linewidth=2, markersize=8, 
+                        label='Consistency Score')
+        line2 = ax2_twin.plot(x, test_returns, 'go-', linewidth=2, markersize=8, 
+                            label='Test Return')
+        
+        ax2.set_xlabel('Walk-Forward Window')
+        ax2.set_ylabel('Consistency Score', color='b')
+        ax2_twin.set_ylabel('Test Return (%)', color='g')
+        ax2.set_title('Consistency vs Performance')
+        ax2.set_xticks(x)
+        ax2.set_xticklabels(windows, rotation=45)
+        ax2.grid(True, alpha=0.3)
+        
+        lines = line1 + line2
+        labels = [l.get_label() for l in lines]
+        ax2.legend(lines, labels, loc='best')
+        
+        # 3. Robustness Score Heatmap
+        # Create robustness matrix
+        metrics = ['Efficiency', 'Overfitting', 'Consistency', 'Sharpe']
+        scores = []
+        
+        for r in results:
+            eff_score = 100 if 0.5 <= r['efficiency_ratio'] <= 1.5 else 50 if 0.3 <= r['efficiency_ratio'] <= 2.0 else 0
+            over_score = 100 - min(r['overfitting_score'], 100)
+            cons_score = r['consistency'] * 100
+            sharpe_score = min(max(r['test_sharpe'] * 33.33, 0), 100)  # Scale Sharpe to 0-100
+            
+            scores.append([eff_score, over_score, cons_score, sharpe_score])
+        
+        scores_array = np.array(scores).T
+        
+        im = ax3.imshow(scores_array, cmap='RdYlGn', aspect='auto', vmin=0, vmax=100)
+        
+        ax3.set_xticks(np.arange(len(windows)))
+        ax3.set_yticks(np.arange(len(metrics)))
+        ax3.set_xticklabels(windows, rotation=45)
+        ax3.set_yticklabels(metrics)
+        ax3.set_title('Walk-Forward Robustness Heatmap')
+        
+        # Add colorbar
+        cbar = plt.colorbar(im, ax=ax3)
+        cbar.set_label('Score (0-100)')
+        
+        # 4. Training vs Test Scatter
+        training_returns = [r['training_return'] for r in results]
+        
+        ax4.scatter(training_returns, test_returns, s=100, alpha=0.6, c=efficiency_ratios, 
+                   cmap='RdYlGn', vmin=0, vmax=2)
+        
+        # Add diagonal line (perfect efficiency)
+        min_val = min(min(training_returns), min(test_returns))
+        max_val = max(max(training_returns), max(test_returns))
+        ax4.plot([min_val, max_val], [min_val, max_val], 'k--', alpha=0.5, label='Perfect Efficiency')
+        
+        # Add efficiency zones
+        ax4.plot([min_val, max_val], [min_val*0.5, max_val*0.5], 'r--', alpha=0.3, label='50% Efficiency')
+        ax4.plot([min_val, max_val], [min_val*1.5, max_val*1.5], 'r--', alpha=0.3, label='150% Efficiency')
+        
+        ax4.set_xlabel('Training Return (%)')
+        ax4.set_ylabel('Test Return (%)')
+        ax4.set_title('Training vs Test Returns (Color = Efficiency Ratio)')
+        ax4.grid(True, alpha=0.3)
+        ax4.legend()
+        
+        # Add colorbar for efficiency
+        sm = plt.cm.ScalarMappable(cmap='RdYlGn', norm=plt.Normalize(vmin=0, vmax=2))
+        sm.set_array([])
+        cbar2 = plt.colorbar(sm, ax=ax4)
+        cbar2.set_label('Efficiency Ratio')
+        
+        plt.tight_layout()
+        
+        # 저장
+        symbol_clean = self.symbol.replace('/', '_')
+        filename = f'zlmacd_ichimoku_{symbol_clean}_walk_forward_efficiency_{self.timeframe}.png'
+        plt.savefig(filename, dpi=300, bbox_inches='tight')
+        print(f"Walk-Forward efficiency chart saved as: {filename}")
+        
+        if show:
+            plt.show()
+        else:
+            plt.close(fig)
     
     def plot_cumulative_performance(self, results: List[Dict], show: bool = True):
         """누적 성과 차트"""
         fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(16, 12))
         
         # 1. 누적 수익률
-        quarters = [r['period'] for r in results]
-        returns = [r['return'] for r in results]
+        windows = [r['window'] for r in results]
+        test_returns = [r['test_return'] for r in results]
         
         # 복리 수익률 계산
         cumulative = [0]
         compound_return = 1.0
-        for ret in returns:
+        for ret in test_returns:
             compound_return *= (1 + ret / 100)
             cumulative.append((compound_return - 1) * 100)
         
@@ -1523,8 +1821,8 @@ class ZLMACDIchimokuWalkForward:
         ax1.fill_between(range(len(cumulative)), 0, cumulative, alpha=0.3)
         ax1.axhline(y=0, color='black', linestyle='-', linewidth=0.5)
         
-        # 각 분기 표시
-        for i, (q, r) in enumerate(zip(quarters, returns)):
+        # 각 윈도우 표시
+        for i, (w, r) in enumerate(zip(windows, test_returns)):
             color = 'green' if r > 0 else 'red'
             ax1.annotate(f"{r:+.1f}%", 
                         xy=(i+1, cumulative[i+1]),
@@ -1533,67 +1831,73 @@ class ZLMACDIchimokuWalkForward:
                         bbox=dict(boxstyle='round,pad=0.3', 
                                 facecolor=color, alpha=0.3))
         
-        ax1.set_title(f'Cumulative Returns - ZL MACD + Ichimoku Strategy ({self.symbol} - {self.timeframe})', fontsize=14)
-        ax1.set_xlabel('Quarter')
+        ax1.set_title(f'Cumulative Test Returns - ZL MACD + Ichimoku Walk-Forward ({self.symbol} - {self.timeframe})', fontsize=14)
+        ax1.set_xlabel('Walk-Forward Window')
         ax1.set_ylabel('Cumulative Return (%)')
-        ax1.set_xticks(range(1, len(quarters)+1))
-        ax1.set_xticklabels(quarters, rotation=45)
+        ax1.set_xticks(range(1, len(windows)+1))
+        ax1.set_xticklabels(windows, rotation=45)
         ax1.grid(True, alpha=0.3)
         
-        # 2. 분기별 수익률
-        x = np.arange(len(quarters))
-        colors = ['green' if r > 0 else 'red' for r in returns]
+        # 2. Training vs Test 비교
+        x = np.arange(len(windows))
+        width = 0.35
         
-        ax2.bar(x, returns, color=colors, alpha=0.7)
+        training_returns = [r['training_return'] for r in results]
+        
+        bars1 = ax2.bar(x - width/2, training_returns, width, label='Training', alpha=0.7, color='blue')
+        bars2 = ax2.bar(x + width/2, test_returns, width, label='Test', alpha=0.7, color='orange')
+        
         ax2.axhline(y=0, color='black', linestyle='-', linewidth=0.5)
         
-        # 평균 필터 비율 표시
-        avg_filtered = np.mean([r.get('filtered_ratio', 0) for r in results])
-        ax2.text(0.5, 0.95, f'Avg Filtered: {avg_filtered:.0f}%', 
-                transform=ax2.transAxes, ha='center', va='top',
-                bbox=dict(boxstyle='round', facecolor='yellow', alpha=0.5))
+        # Efficiency Ratio 표시
+        for i, r in enumerate(results):
+            eff = r['efficiency_ratio']
+            color = 'green' if 0.5 <= eff <= 1.5 else 'red'
+            ax2.text(i, max(training_returns[i], test_returns[i]) + 2, 
+                    f'{eff:.1f}', ha='center', fontsize=8, color=color)
         
-        ax2.set_xlabel('Quarter')
+        ax2.set_xlabel('Walk-Forward Window')
         ax2.set_ylabel('Return (%)')
-        ax2.set_title('Quarterly Returns')
+        ax2.set_title('Training vs Test Returns (Efficiency Ratio shown above)')
         ax2.set_xticks(x)
-        ax2.set_xticklabels(quarters, rotation=45)
+        ax2.set_xticklabels(windows, rotation=45)
+        ax2.legend()
         ax2.grid(True, alpha=0.3)
         
-        # 3. 승률 분포
-        win_rates = [r['win_rate'] for r in results]
+        # 3. Overfitting Score 분석
+        overfitting_scores = [r['overfitting_score'] for r in results]
         
-        ax3.plot(x, win_rates, 'go-', linewidth=2, markersize=8)
-        ax3.axhline(y=50, color='red', linestyle='--', alpha=0.5, label='50% Line')
-        ax3.fill_between(x, 50, win_rates, where=np.array(win_rates) > 50, 
-                        alpha=0.3, color='green', label='Above 50%')
-        ax3.fill_between(x, 50, win_rates, where=np.array(win_rates) <= 50, 
-                        alpha=0.3, color='red', label='Below 50%')
+        colors = ['green' if score < 20 else 'orange' if score < 40 else 'red' for score in overfitting_scores]
+        bars = ax3.bar(x, overfitting_scores, color=colors, alpha=0.7)
         
-        ax3.set_xlabel('Quarter')
-        ax3.set_ylabel('Win Rate (%)')
-        ax3.set_title('Win Rate by Quarter')
+        # 임계값 선 추가
+        ax3.axhline(y=20, color='green', linestyle='--', alpha=0.5, label='Low Overfitting (<20)')
+        ax3.axhline(y=40, color='orange', linestyle='--', alpha=0.5, label='Moderate Overfitting')
+        
+        ax3.set_xlabel('Walk-Forward Window')
+        ax3.set_ylabel('Overfitting Score')
+        ax3.set_title('Overfitting Analysis (Lower is Better)')
         ax3.set_xticks(x)
-        ax3.set_xticklabels(quarters, rotation=45)
+        ax3.set_xticklabels(windows, rotation=45)
         ax3.set_ylim(0, 100)
         ax3.grid(True, alpha=0.3)
         ax3.legend()
         
-        # 4. 샤프 비율 및 드로우다운
-        sharpes = [r['sharpe'] for r in results]
-        max_dds = [-r['max_dd'] for r in results]  # 음수로 표시
+        # 4. Test 기간 샤프 비율 및 드로우다운
+        test_sharpes = [r['test_sharpe'] for r in results]
+        test_max_dds = [-r['test_max_dd'] for r in results]  # 음수로 표시
         
         ax4_twin = ax4.twinx()
         
-        line1 = ax4.plot(x, sharpes, 'go-', linewidth=2, markersize=8, label='Sharpe Ratio')
-        line2 = ax4_twin.plot(x, max_dds, 'ro-', linewidth=2, markersize=8, label='Max Drawdown')
+        line1 = ax4.plot(x, test_sharpes, 'go-', linewidth=2, markersize=8, label='Test Sharpe Ratio')
+        line2 = ax4_twin.plot(x, test_max_dds, 'ro-', linewidth=2, markersize=8, label='Test Max Drawdown')
         
-        ax4.set_xlabel('Quarter')
+        ax4.set_xlabel('Walk-Forward Window')
         ax4.set_ylabel('Sharpe Ratio', color='g')
         ax4_twin.set_ylabel('Max Drawdown (%)', color='r')
-        ax4.set_title('Risk-Adjusted Performance')
+        ax4.set_title('Test Period Risk-Adjusted Performance')
         ax4.set_xticks(x)
-        ax4.set_xticklabels(quarters, rotation=45)
+        ax4.set_xticklabels(windows, rotation=45)
         ax4.grid(True, alpha=0.3)
         ax4.axhline(y=0, color='black', linestyle='--', alpha=0.5)
         
@@ -1616,9 +1920,9 @@ class ZLMACDIchimokuWalkForward:
             plt.close(fig)
     
     def generate_summary_report(self, results: List[Dict]):
-        """전체 성과 요약"""
+        """Walk-Forward 분석 전체 성과 요약"""
         print("\n" + "="*80)
-        print(f"ZL MACD + ICHIMOKU STRATEGY - COMPLETE ANALYSIS SUMMARY ({self.symbol} - {self.timeframe})")
+        print(f"ZL MACD + ICHIMOKU - WALK-FORWARD ANALYSIS SUMMARY ({self.symbol} - {self.timeframe})")
         print("="*80)
         
         # 결과가 없는 경우 처리
@@ -1626,69 +1930,101 @@ class ZLMACDIchimokuWalkForward:
             print("\n❌ No results to analyze.")
             return
         
-        # 전체 통계
-        total_return = sum(r['return'] for r in results)
-        avg_return = np.mean([r['return'] for r in results])
-        positive_quarters = sum(1 for r in results if r['return'] > 0)
+        # Walk-Forward 전체 통계
+        total_test_return = sum(r['test_return'] for r in results)
+        avg_test_return = np.mean([r['test_return'] for r in results])
+        positive_windows = sum(1 for r in results if r['test_return'] > 0)
+        consistent_windows = sum(1 for r in results if r['consistency'] == 1)
         
-        print("\n📊 Overall Performance:")
-        print(f"  • Total Return: {total_return:.2f}%")
-        print(f"  • Average Quarterly Return: {avg_return:.2f}%")
-        print(f"  • Positive Quarters: {positive_quarters}/{len(results)}")
-        print(f"  • Quarterly Win Rate: {positive_quarters/len(results)*100:.1f}%")
+        print("\n📊 Walk-Forward Overall Performance:")
+        print(f"  • Total Test Return: {total_test_return:.2f}%")
+        print(f"  • Average Test Return per Window: {avg_test_return:.2f}%")
+        print(f"  • Profitable Windows: {positive_windows}/{len(results)} ({positive_windows/len(results)*100:.1f}%)")
+        print(f"  • Consistent Windows: {consistent_windows}/{len(results)} ({consistent_windows/len(results)*100:.1f}%)")
         
-        # 전체 거래 통계
-        total_trades = sum(r['trades'] for r in results)
-        all_win_rates = [r['win_rate'] for r in results]
+        # Training vs Test 비교
+        avg_train_return = np.mean([r['training_return'] for r in results])
+        avg_efficiency = np.mean([r['efficiency_ratio'] for r in results])
         
-        print("\n🎯 Trading Statistics:")
-        print(f"  • Total Trades: {total_trades}")
-        print(f"  • Average Win Rate: {np.mean(all_win_rates):.1f}%")
-        print(f"  • Average Trades per Quarter: {total_trades/len(results):.1f}")
+        print("\n🔄 Training vs Test Performance:")
+        print(f"  • Average Training Return: {avg_train_return:.2f}%")
+        print(f"  • Average Test Return: {avg_test_return:.2f}%")
+        print(f"  • Average Efficiency Ratio: {avg_efficiency:.2f}")
+        print(f"  • Performance Degradation: {((avg_test_return - avg_train_return) / avg_train_return * 100):.1f}%")
         
-        # 필터 효과
-        avg_filtered = np.mean([r.get('filtered_ratio', 0) for r in results])
-        max_consecutive_losses = max([r.get('consecutive_losses', 0) for r in results])
+        # 과적합 분석
+        avg_overfitting = np.mean([r['overfitting_score'] for r in results])
+        low_overfitting = sum(1 for r in results if r['overfitting_score'] < 20)
         
-        print("\n🔍 Filter Effect:")
-        print(f"  • Average Filtered Signals: {avg_filtered:.1f}%")
-        print(f"  • Maximum Consecutive Losses: {max_consecutive_losses}")
+        print("\n🎯 Overfitting Analysis:")
+        print(f"  • Average Overfitting Score: {avg_overfitting:.1f}")
+        print(f"  • Low Overfitting Windows: {low_overfitting}/{len(results)} ({low_overfitting/len(results)*100:.1f}%)")
         
         # 리스크 지표
-        sharpes = [r['sharpe'] for r in results]
-        max_dds = [r['max_dd'] for r in results]
+        test_sharpes = [r['test_sharpe'] for r in results]
+        test_max_dds = [r['test_max_dd'] for r in results]
         
-        print("\n📈 Risk Metrics:")
-        print(f"  • Average Sharpe Ratio: {np.mean(sharpes):.2f}")
-        print(f"  • Best Sharpe: {max(sharpes):.2f} ({results[sharpes.index(max(sharpes))]['period']})")
-        print(f"  • Average Max Drawdown: {np.mean(max_dds):.1f}%")
-        print(f"  • Worst Drawdown: {max(max_dds):.1f}% ({results[max_dds.index(max(max_dds))]['period']})")
+        print("\n📈 Risk Metrics (Test Period):")
+        print(f"  • Average Sharpe Ratio: {np.mean(test_sharpes):.2f}")
+        print(f"  • Best Sharpe: {max(test_sharpes):.2f}")
+        print(f"  • Average Max Drawdown: {np.mean(test_max_dds):.1f}%")
+        print(f"  • Worst Drawdown: {max(test_max_dds):.1f}%")
         
-        # 분기별 상세
-        print("\n📅 Quarterly Breakdown:")
-        print("-"*90)
-        print(f"{'Quarter':<10} {'Return':<10} {'Sharpe':<10} {'Win Rate':<10} {'Max DD':<10} {'Trades':<10} {'Filtered':<10}")
-        print("-"*90)
+        # Walk-Forward Windows 상세
+        print("\n📅 Walk-Forward Windows Detail:")
+        print("-"*120)
+        print(f"{'Window':<8} {'Training Return':<15} {'Test Return':<12} {'Efficiency':<12} {'Overfitting':<12} {'Test Sharpe':<12} {'Test DD':<10}")
+        print("-"*120)
         
         for r in results:
-            print(f"{r['period']:<10} {r['return']:>8.1f}% {r['sharpe']:>9.2f} "
-                  f"{r['win_rate']:>9.1f}% {r['max_dd']:>9.1f}% {r['trades']:>9} "
-                  f"{r.get('filtered_ratio', 0):>8.0f}%")
+            print(f"{r['window']:<8} {r['training_return']:>13.1f}% {r['test_return']:>10.1f}% "
+                  f"{r['efficiency_ratio']:>11.2f} {r['overfitting_score']:>11.1f} "
+                  f"{r['test_sharpe']:>11.2f} {r['test_max_dd']:>8.1f}%")
         
-        # 최고/최악 분기
-        best_quarter = max(results, key=lambda x: x['return'])
-        worst_quarter = min(results, key=lambda x: x['return'])
+        # 최고/최악 Window
+        best_window = max(results, key=lambda x: x['test_return'])
+        worst_window = min(results, key=lambda x: x['test_return'])
+        most_efficient = max(results, key=lambda x: x['efficiency_ratio'] if x['efficiency_ratio'] < 2 else 0)
         
-        print(f"\n🏆 Best Quarter: {best_quarter['period']} ({best_quarter['return']:.1f}%)")
-        print(f"📉 Worst Quarter: {worst_quarter['period']} ({worst_quarter['return']:.1f}%)")
+        print(f"\n🏆 Best Test Performance: {best_window['window']} ({best_window['test_return']:.1f}%)")
+        print(f"📉 Worst Test Performance: {worst_window['window']} ({worst_window['test_return']:.1f}%)")
+        print(f"⚖️ Most Efficient Window: {most_efficient['window']} (Efficiency: {most_efficient['efficiency_ratio']:.2f})")
+        
+        # Walk-Forward 강건성 평가
+        print("\n💎 Walk-Forward Robustness Evaluation:")
+        
+        # 1. 일관성 점수
+        consistency_score = consistent_windows / len(results) * 100
+        print(f"  • Consistency Score: {consistency_score:.1f}%")
+        
+        # 2. 안정성 점수 (효율성 비율의 표준편차)
+        efficiency_std = np.std([r['efficiency_ratio'] for r in results])
+        stability_score = 100 / (1 + efficiency_std)
+        print(f"  • Stability Score: {stability_score:.1f}%")
+        
+        # 3. 전체 강건성 점수
+        robustness_score = (consistency_score + stability_score) / 2
+        print(f"  • Overall Robustness Score: {robustness_score:.1f}%")
+        
+        # 강건성 평가
+        if robustness_score > 70:
+            rating = "EXCELLENT - Highly robust strategy"
+        elif robustness_score > 50:
+            rating = "GOOD - Reasonably robust strategy"
+        elif robustness_score > 30:
+            rating = "FAIR - Some overfitting concerns"
+        else:
+            rating = "POOR - Significant overfitting risk"
+            
+        print(f"  • Rating: {rating}")
         
         print("\n💡 Key Insights:")
         print("  1. ZL MACD eliminates lag for faster signal detection")
         print("  2. Ichimoku Cloud provides multi-layered trend confirmation")
         print("  3. 3+ signals required for entry (ZL MACD cross + Cloud + TK cross)")
         print("  4. Dynamic exits: Cloud break for trend reversal, Kijun touch for profit taking")
-        print("  5. Initial tight stop (2%) + Trailing stop (10% from peak)")
-        print("  6. Pyramiding: 3 levels at 3%, 6%, 9% profit (75%, 50%, 25% size)")
+        print("  5. Initial tight stop (1.5%) + Trailing stop (10% from peak)")
+        print("  6. Pyramiding: 3 levels at 4%, 6%, 9% profit (75%, 50%, 25% size)")
         print("  7. ADX filter (>25) ensures trading only in trending markets")
         print("  8. Cloud acts as dynamic support/resistance for risk management")
 
@@ -1758,17 +2094,20 @@ def main():
     clean_results = []
     for r in results:
         clean_r = {
-            'period': r['period'],
-            'return': r['return'],
-            'sharpe': r['sharpe'],
-            'win_rate': r['win_rate'],
-            'max_dd': r['max_dd'],
-            'trades': r['trades'],
-            'final_capital': r.get('final_capital', 0),
-            'avg_win': r.get('avg_win', 0),
-            'avg_loss': r.get('avg_loss', 0),
-            'consecutive_losses': r.get('consecutive_losses', 0),
-            'filtered_ratio': r.get('filtered_ratio', 0),
+            'window': r['window'],
+            'training_start': r.get('training_start', ''),
+            'training_end': r.get('training_end', ''),
+            'test_start': r.get('test_start', ''),
+            'test_end': r.get('test_end', ''),
+            'training_return': r.get('training_return', 0),
+            'test_return': r.get('test_return', 0),
+            'efficiency_ratio': r.get('efficiency_ratio', 0),
+            'overfitting_score': r.get('overfitting_score', 0),
+            'consistency': r.get('consistency', 0),
+            'test_sharpe': r.get('test_sharpe', 0),
+            'test_max_dd': r.get('test_max_dd', 0),
+            'test_trades': r.get('test_trades', 0),
+            'test_win_rate': r.get('test_win_rate', 0),
             'timeframe': timeframe,
             'symbol': analyzer.symbol
         }

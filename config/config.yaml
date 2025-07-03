@@ -541,8 +541,8 @@ strategies:
     pyramiding_enabled: true
     max_pyramiding_levels: 3  # 최대 3단계
     pyramiding_levels:
-      - profit_pct: 3.0
-        size_ratio: 0.75  # 원 포지션의 75%
+      - profit_pct: 4.0
+        size_ratio: 0.75  # 원 포지션의 75% (백테스트 개선: 3% → 4%)
       - profit_pct: 6.0
         size_ratio: 0.50  # 원 포지션의 50%
       - profit_pct: 9.0

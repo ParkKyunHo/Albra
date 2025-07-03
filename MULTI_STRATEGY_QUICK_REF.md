@@ -146,6 +146,36 @@ python src/main.py --strategies TFPE  # YOUR_STRATEGY 제외
 python src/main.py --status
 ```
 
+## 📊 현재 운영 전략 요약
+
+### TFPE (Trend Following with Price Extremes)
+- **전략명**: `TFPE`
+- **계좌**: Master
+- **심볼**: BTCUSDT
+- **레버리지**: 10x
+- **포지션 크기**: 24%
+- **특징**: Donchian Channel + 다중 신호 시스템
+
+### ZLMACD_ICHIMOKU
+- **전략명**: `ZLMACD_ICHIMOKU`
+- **계좌**: Master
+- **심볼**: BTCUSDT
+- **레버리지**: 10x (백테스트 개선: 8x → 10x)
+- **포지션 크기**: 24% (Kelly로 5-20% 동적 조정)
+- **특징**: 
+  - Zero Lag MACD + Ichimoku Cloud
+  - 초기 손절: 1.5% (백테스트 개선: 2% → 1.5%)
+  - 피라미딩: 4%, 6%, 9% (백테스트 개선: 첫 레벨 3% → 4%)
+  - Walk-Forward 백테스트: 평균 수익 68.4%, Sharpe 3.18
+
+### ZLHMA_EMA_CROSS
+- **전략명**: `ZLHMA_EMA_CROSS`
+- **계좌**: Sub1
+- **심볼**: BTCUSDT
+- **레버리지**: 10x
+- **포지션 크기**: 20% (Kelly로 동적 조정)
+- **특징**: Zero Lag HMA + 50/200 EMA Cross
+
 ---
 
 **Remember**: strategy_name을 빼먹지 마세요! 🎯

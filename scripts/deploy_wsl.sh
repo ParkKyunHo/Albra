@@ -217,8 +217,9 @@ echo "Select deployment mode:"
 echo "  1. Single Account Mode"
 echo "  2. Multi Account Mode"
 echo
-read -p "Enter choice (1 or 2) [Default: 2]: " MODE_CHOICE
-MODE_CHOICE=${MODE_CHOICE:-2}
+# 자동으로 멀티모드 선택
+MODE_CHOICE=2
+echo "Auto-selecting Multi Account Mode (2)"
 
 if [ "$MODE_CHOICE" = "2" ]; then
     echo -e "${GREEN}Setting up multi-account mode...${NC}"

@@ -56,11 +56,41 @@ AlbraTrading은 1인 사용자를 위한 바이낸스 자동 트레이딩 시스
 - **스마트 필터링**: 중요 이벤트만 선별 알림
 - **멀티 계좌 알림**: 계좌별 구분된 알림
 
-### 5. 현재 운영 전략 (TFPE)
-- 20기간 Donchian Channel 추세 감지
-- 다중 신호 확인 시스템 (4/7 이상)
-- ATR 기반 동적 손절/익절
-- Kelly Criterion 기반 포지션 사이징
+### 5. 현재 운영 전략
+
+#### TFPE (Trend Following with Price Extremes)
+- **계좌**: Master
+- **타임프레임**: 4시간봉 기준
+- **특징**:
+  - 20기간 Donchian Channel 추세 감지
+  - 다중 신호 확인 시스템 (4/7 이상)
+  - ATR 기반 동적 손절/익절
+  - Kelly Criterion 기반 포지션 사이징
+  - 레버리지: 10x
+
+#### ZLMACD Ichimoku (Zero Lag MACD + Ichimoku Cloud)
+- **계좌**: Master
+- **타임프레임**: 1시간봉 전용
+- **특징**:
+  - Zero Lag MACD 크로스 신호
+  - Ichimoku Cloud 추세 확인
+  - 3단계 부분 익절 시스템 (5%, 10%, 15%)
+  - 3단계 피라미딩 (4%, 6%, 9% 수익 시)
+  - Kelly Criterion 동적 포지션 사이징 (5-20%)
+  - 레버리지: 10x (백테스트 개선)
+  - 초기 손절: 1.5% (백테스트 개선)
+  - Walk-Forward 백테스트 결과: 평균 수익률 68.4%, Sharpe 3.18
+
+#### ZLHMA EMA Cross (Zero Lag HMA + 50/200 EMA Cross)
+- **계좌**: Sub1
+- **타임프레임**: 1시간봉
+- **특징**:
+  - Zero Lag Hull MA + 50/200 EMA 골든/데드 크로스
+  - ADX 추세 필터 (>25)
+  - 트레일링 스톱 (5% 수익 시 활성화, 2% 트레일)
+  - 3단계 부분 익절 (5%, 10%, 15%)
+  - Kelly Criterion 포지션 사이징
+  - 레버리지: 10x
 
 ### 6. Multi-Strategy Position Management ⭐ NEW
 시스템은 여러 전략이 동일한 심볼을 독립적으로 거래할 수 있도록 설계되었습니다.
