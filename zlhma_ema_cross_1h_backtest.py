@@ -771,7 +771,171 @@ class ZLHMAEMACrossStrategy:
         }
 
 
-def run_1h_backtest(start_date: str = '2024-01-01', end_date: str = '2025-06-30'):
+def create_performance_charts(strategy, start_date: str, end_date: str):
+    """성과 차트 생성"""
+    print("\n📊 Creating performance charts...")
+    
+    # Equity curve 데이터 준비
+    equity_df = pd.DataFrame(strategy.equity_curve)
+    equity_df.set_index('timestamp', inplace=True)
+    
+    # 수익률 계산
+    equity_df['returns'] = equity_df['equity'].pct_change()
+    equity_df['cumulative_returns'] = ((equity_df['equity'] / strategy.initial_capital) - 1) * 100
+    
+    # 드로다운 계산
+    equity_df['running_max'] = equity_df['equity'].cummax()
+    equity_df['drawdown'] = ((equity_df['equity'] - equity_df['running_max']) / equity_df['running_max']) * 100
+    
+    # 거래 데이터 준비
+    trades_df = pd.DataFrame(strategy.trades)
+    if not trades_df.empty:
+        trades_df['cumulative_pnl'] = trades_df['pnl'].cumsum()
+    
+    # 차트 생성
+    fig, axes = plt.subplots(4, 1, figsize=(14, 16), sharex=True)
+    
+    # 1. 누적 수익률 차트
+    ax1 = axes[0]
+    ax1.plot(equity_df.index, equity_df['cumulative_returns'], 'b-', linewidth=2, label='Cumulative Returns')
+    ax1.fill_between(equity_df.index, 0, equity_df['cumulative_returns'], alpha=0.3)
+    ax1.set_ylabel('Cumulative Returns (%)', fontsize=12)
+    ax1.set_title(f'ZLHMA 50-200 EMA Cross Strategy - 1H Performance ({start_date} to {end_date})', fontsize=14, fontweight='bold')
+    ax1.grid(True, alpha=0.3)
+    ax1.legend()
+    
+    # 2. 자본 추이 차트
+    ax2 = axes[1]
+    ax2.plot(equity_df.index, equity_df['equity'], 'g-', linewidth=2, label='Portfolio Value')
+    ax2.axhline(y=strategy.initial_capital, color='r', linestyle='--', alpha=0.5, label='Initial Capital')
+    
+    # 거래 포인트 표시
+    if not trades_df.empty:
+        for _, trade in trades_df.iterrows():
+            if trade['side'] == 'LONG':
+                ax2.scatter(trade['entry_time'], equity_df.loc[trade['entry_time'], 'equity'], 
+                           color='green', marker='^', s=100, zorder=5)
+                ax2.scatter(trade['exit_time'], equity_df.loc[trade['exit_time'], 'equity'], 
+                           color='red', marker='v', s=100, zorder=5)
+            else:
+                ax2.scatter(trade['entry_time'], equity_df.loc[trade['entry_time'], 'equity'], 
+                           color='red', marker='v', s=100, zorder=5)
+                ax2.scatter(trade['exit_time'], equity_df.loc[trade['exit_time'], 'equity'], 
+                           color='green', marker='^', s=100, zorder=5)
+    
+    ax2.set_ylabel('Portfolio Value ($)', fontsize=12)
+    ax2.set_title('Portfolio Value Over Time', fontsize=12)
+    ax2.grid(True, alpha=0.3)
+    ax2.legend()
+    
+    # 3. 드로다운 차트
+    ax3 = axes[2]
+    ax3.fill_between(equity_df.index, 0, equity_df['drawdown'], color='red', alpha=0.5)
+    ax3.plot(equity_df.index, equity_df['drawdown'], 'r-', linewidth=1)
+    ax3.set_ylabel('Drawdown (%)', fontsize=12)
+    ax3.set_title('Drawdown Analysis', fontsize=12)
+    ax3.grid(True, alpha=0.3)
+    
+    # 4. 월별 수익률 히트맵 준비
+    ax4 = axes[3]
+    if not equity_df.empty:
+        # 월별 수익률 계산
+        monthly_returns = equity_df['returns'].resample('M').apply(lambda x: ((1 + x).prod() - 1) * 100)
+        
+        # 연도와 월 분리
+        years = sorted(monthly_returns.index.year.unique())
+        months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        
+        # 히트맵 데이터 준비
+        heatmap_data = np.zeros((len(years), 12))
+        for i, year in enumerate(years):
+            for j, month in enumerate(range(1, 13)):
+                try:
+                    value = monthly_returns[monthly_returns.index.year == year][monthly_returns.index.month == month].values[0]
+                    heatmap_data[i, j] = value
+                except:
+                    heatmap_data[i, j] = np.nan
+        
+        # 히트맵 그리기
+        im = ax4.imshow(heatmap_data, cmap='RdYlGn', aspect='auto', vmin=-10, vmax=10)
+        ax4.set_xticks(np.arange(12))
+        ax4.set_yticks(np.arange(len(years)))
+        ax4.set_xticklabels(months)
+        ax4.set_yticklabels(years)
+        ax4.set_title('Monthly Returns Heatmap (%)', fontsize=12)
+        
+        # 값 표시
+        for i in range(len(years)):
+            for j in range(12):
+                if not np.isnan(heatmap_data[i, j]):
+                    text = ax4.text(j, i, f'{heatmap_data[i, j]:.1f}', 
+                                   ha="center", va="center", color="black", fontsize=8)
+        
+        # 컬러바 추가
+        cbar = plt.colorbar(im, ax=ax4)
+        cbar.set_label('Monthly Return (%)', rotation=270, labelpad=20)
+    
+    plt.tight_layout()
+    
+    # 차트 저장
+    chart_file = f'zlhma_ema_cross_1h_performance_{datetime.now().strftime("%Y%m%d_%H%M%S")}.png'
+    plt.savefig(chart_file, dpi=300, bbox_inches='tight')
+    print(f"📊 Performance charts saved to {chart_file}")
+    
+    # 추가 통계 차트
+    fig2, axes2 = plt.subplots(2, 2, figsize=(14, 10))
+    
+    # 1. 거래별 손익 차트
+    ax1 = axes2[0, 0]
+    if not trades_df.empty:
+        colors = ['green' if pnl > 0 else 'red' for pnl in trades_df['pnl']]
+        ax1.bar(range(len(trades_df)), trades_df['pnl'], color=colors, alpha=0.7)
+        ax1.axhline(y=0, color='black', linestyle='-', alpha=0.5)
+        ax1.set_xlabel('Trade Number')
+        ax1.set_ylabel('PnL ($)')
+        ax1.set_title('Individual Trade PnL')
+        ax1.grid(True, alpha=0.3)
+    
+    # 2. 누적 손익 차트
+    ax2 = axes2[0, 1]
+    if not trades_df.empty:
+        ax2.plot(trades_df['cumulative_pnl'], 'b-', linewidth=2)
+        ax2.fill_between(range(len(trades_df)), 0, trades_df['cumulative_pnl'], alpha=0.3)
+        ax2.set_xlabel('Trade Number')
+        ax2.set_ylabel('Cumulative PnL ($)')
+        ax2.set_title('Cumulative Trade PnL')
+        ax2.grid(True, alpha=0.3)
+    
+    # 3. 승률 분포 파이 차트
+    ax3 = axes2[1, 0]
+    if not trades_df.empty:
+        wins = len(trades_df[trades_df['pnl'] > 0])
+        losses = len(trades_df[trades_df['pnl'] <= 0])
+        ax3.pie([wins, losses], labels=['Wins', 'Losses'], colors=['green', 'red'], 
+                autopct='%1.1f%%', startangle=90)
+        ax3.set_title('Win/Loss Distribution')
+    
+    # 4. 수익률 분포 히스토그램
+    ax4 = axes2[1, 1]
+    if not trades_df.empty:
+        ax4.hist(trades_df['pnl_pct'] * 100, bins=20, color='blue', alpha=0.7, edgecolor='black')
+        ax4.axvline(x=0, color='red', linestyle='--', alpha=0.5)
+        ax4.set_xlabel('Return (%)')
+        ax4.set_ylabel('Frequency')
+        ax4.set_title('Trade Return Distribution')
+        ax4.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    
+    # 통계 차트 저장
+    stats_chart_file = f'zlhma_ema_cross_1h_stats_{datetime.now().strftime("%Y%m%d_%H%M%S")}.png'
+    plt.savefig(stats_chart_file, dpi=300, bbox_inches='tight')
+    print(f"📊 Statistics charts saved to {stats_chart_file}")
+    
+    plt.close('all')
+
+
+def run_1h_backtest(start_date: str = '2021-01-01', end_date: str = '2025-03-31'):
     """1시간봉 백테스트 실행"""
     print("=" * 80)
     print("ZLHMA 50-200 EMA Cross Strategy - 1H Backtest")
@@ -825,7 +989,155 @@ def run_1h_backtest(start_date: str = '2024-01-01', end_date: str = '2025-06-30'
         }, f, indent=2, default=str)
     
     print(f"\n✅ Results saved to {results_file}")
+    
+    # 시각화
+    create_performance_charts(strategy, start_date, end_date)
+
+
+def run_walk_forward_1h(start_date: str = '2021-01-01', end_date: str = '2025-03-31'):
+    """Walk-Forward Analysis for 1H data"""
+    print("=" * 80)
+    print("ZLHMA 50-200 EMA Cross Strategy - Walk-Forward Analysis (1H)")
+    print(f"Period: {start_date} to {end_date}")
+    print("=" * 80)
+    
+    # Walk-Forward 윈도우 설정
+    quarters = [
+        ('2021-Q1', '2021-01-01', '2021-03-31'),
+        ('2021-Q2', '2021-04-01', '2021-06-30'),
+        ('2021-Q3', '2021-07-01', '2021-09-30'),
+        ('2021-Q4', '2021-10-01', '2021-12-31'),
+        ('2022-Q1', '2022-01-01', '2022-03-31'),
+        ('2022-Q2', '2022-04-01', '2022-06-30'),
+        ('2022-Q3', '2022-07-01', '2022-09-30'),
+        ('2022-Q4', '2022-10-01', '2022-12-31'),
+        ('2023-Q1', '2023-01-01', '2023-03-31'),
+        ('2023-Q2', '2023-04-01', '2023-06-30'),
+        ('2023-Q3', '2023-07-01', '2023-09-30'),
+        ('2023-Q4', '2023-10-01', '2023-12-31'),
+        ('2024-Q1', '2024-01-01', '2024-03-31'),
+        ('2024-Q2', '2024-04-01', '2024-06-30'),
+        ('2024-Q3', '2024-07-01', '2024-09-30'),
+        ('2024-Q4', '2024-10-01', '2024-12-31'),
+        ('2025-Q1', '2025-01-01', '2025-03-31'),
+    ]
+    
+    results = []
+    cumulative_capital = 10000
+    
+    # 전체 데이터 먼저 가져오기
+    print("\n📊 Fetching complete 1H dataset...")
+    fetcher = SimpleDataFetcher1H()
+    df_full = fetcher.fetch_1h_data('BTC/USDT', start_date, end_date)
+    
+    if df_full is None or len(df_full) == 0:
+        print("❌ Failed to fetch data")
+        return
+    
+    for period_name, period_start, period_end in quarters:
+        if pd.to_datetime(period_end) > pd.to_datetime(end_date):
+            continue
+            
+        print(f"\n{'='*60}")
+        print(f"Testing Period: {period_name} ({period_start} to {period_end})")
+        print(f"{'='*60}")
+        
+        # 해당 기간 데이터 추출
+        period_df = df_full[(df_full.index >= period_start) & (df_full.index <= period_end)].copy()
+        
+        if len(period_df) < 200:  # 최소 데이터 요구사항
+            print(f"⚠️ Insufficient data for {period_name} (only {len(period_df)} candles)")
+            result = {
+                'period': period_name,
+                'start': period_start,
+                'end': period_end,
+                'initial_capital': cumulative_capital,
+                'final_capital': cumulative_capital,
+                'total_return': 0,
+                'win_rate': 0,
+                'profit_factor': 0,
+                'max_drawdown': 0,
+                'sharpe_ratio': 0,
+                'total_trades': 0
+            }
+            results.append(result)
+            continue
+        
+        # 전략 실행
+        strategy = ZLHMAEMACrossStrategy(initial_capital=cumulative_capital, timeframe='1h', symbol='BTC/USDT')
+        report = strategy.backtest(period_df, print_trades=False, plot_chart=False)
+        
+        # 다음 기간을 위한 자본 업데이트
+        cumulative_capital = strategy.capital
+        
+        # 결과 저장
+        result = {
+            'period': period_name,
+            'start': period_start,
+            'end': period_end,
+            'initial_capital': strategy.initial_capital,
+            'final_capital': strategy.capital,
+            **report
+        }
+        results.append(result)
+        
+        # 결과 출력
+        print(f"\n📊 Results for {period_name}:")
+        print(f"  • Total Return: {report['total_return']:.2f}%")
+        print(f"  • Win Rate: {report['win_rate']:.1f}%")
+        print(f"  • Profit Factor: {report['profit_factor']:.2f}")
+        print(f"  • Max Drawdown: {report['max_drawdown']:.2f}%")
+        print(f"  • Total Trades: {report['total_trades']}")
+        print(f"  • Capital: ${strategy.initial_capital:.2f} → ${strategy.capital:.2f}")
+    
+    # 전체 결과 요약
+    print(f"\n{'='*80}")
+    print("OVERALL SUMMARY")
+    print(f"{'='*80}")
+    
+    if results:
+        total_return = ((cumulative_capital - 10000) / 10000) * 100
+        avg_win_rate = np.mean([r['win_rate'] for r in results if r['total_trades'] > 0])
+        avg_profit_factor = np.mean([r['profit_factor'] for r in results if r['profit_factor'] != float('inf') and r['total_trades'] > 0])
+        worst_drawdown = min([r['max_drawdown'] for r in results])
+        total_trades = sum([r['total_trades'] for r in results])
+        
+        print(f"Total Return: {total_return:.2f}% (${10000:.2f} → ${cumulative_capital:.2f})")
+        print(f"Average Win Rate: {avg_win_rate:.1f}%")
+        print(f"Average Profit Factor: {avg_profit_factor:.2f}")
+        print(f"Worst Drawdown: {worst_drawdown:.2f}%")
+        print(f"Total Trades: {total_trades}")
+        print(f"Average Trades per Quarter: {total_trades/len(results):.1f}")
+        
+        # 최고/최저 분기
+        best_quarter = max(results, key=lambda x: x['total_return'])
+        worst_quarter = min(results, key=lambda x: x['total_return'])
+        
+        print(f"\nBest Quarter: {best_quarter['period']} ({best_quarter['total_return']:.2f}%)")
+        print(f"Worst Quarter: {worst_quarter['period']} ({worst_quarter['total_return']:.2f}%)")
+    
+    # 결과 저장
+    results_file = f'zlhma_ema_cross_1h_wf_results_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
+    with open(results_file, 'w') as f:
+        json.dump({
+            'strategy': 'ZLHMA 50-200 EMA Cross (1H)',
+            'period': f"{start_date} to {end_date}",
+            'timeframe': '1h',
+            'leverage': 8,
+            'results': results,
+            'summary': {
+                'total_return': total_return if results else 0,
+                'final_capital': cumulative_capital,
+                'total_quarters': len(results)
+            }
+        }, f, indent=2, default=str)
+    
+    print(f"\n✅ Walk-Forward results saved to {results_file}")
 
 
 if __name__ == "__main__":
+    # 전체 백테스트 실행
     run_1h_backtest()
+    
+    # Walk-Forward Analysis 실행 (선택사항)
+    # run_walk_forward_1h()
