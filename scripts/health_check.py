@@ -11,6 +11,7 @@ import subprocess
 import psutil
 import time
 import json
+import fcntl
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -18,6 +19,7 @@ from pathlib import Path
 PROJECT_ROOT = Path("/home/ubuntu/AlbraTrading")
 LOG_DIR = PROJECT_ROOT / "logs"
 STATE_FILE = PROJECT_ROOT / "data" / "system_state.json"
+LOCK_FILE = PROJECT_ROOT / "data" / "health_check.lock"
 
 class HealthChecker:
     def __init__(self):
@@ -45,23 +47,29 @@ class HealthChecker:
     
     def check_process(self):
         """프로세스 상태 확인"""
-        supervisor_running = False
         main_running = False
         
         for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
             try:
                 cmdline = ' '.join(proc.info['cmdline'] or [])
-                if 'supervisor.py' in cmdline:
-                    supervisor_running = True
-                elif 'main.py' in cmdline and 'AlbraTrading' in cmdline:
+                if 'main_multi_account.py' in cmdline and 'AlbraTrading' in cmdline:
                     main_running = True
+                    break
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
         
-        if not supervisor_running:
-            return False, "Supervisor 프로세스 없음"
         if not main_running:
-            return False, "Main 프로세스 없음"
+            # systemd 서비스 상태 확인
+            try:
+                result = subprocess.run(
+                    ["systemctl", "is-active", "albratrading-multi"],
+                    capture_output=True,
+                    text=True
+                )
+                if result.stdout.strip() != "active":
+                    return False, "AlbraTrading 서비스가 실행되지 않음"
+            except:
+                return False, "서비스 상태 확인 실패"
         
         return True, "정상"
     
@@ -121,7 +129,7 @@ class HealthChecker:
             
             # systemd 서비스 재시작
             result = subprocess.run(
-                ["sudo", "systemctl", "restart", "albratrading"],
+                ["sudo", "systemctl", "restart", "albratrading-multi"],
                 capture_output=True,
                 text=True
             )
@@ -194,44 +202,86 @@ class HealthChecker:
         except Exception as e:
             print(f"상태 저장 실패: {str(e)}")
     
-    def run(self):
-        """메인 실행 루프"""
-        print(f"[{datetime.now()}] Health Checker 시작")
-        consecutive_failures = 0
+    def run_once(self):
+        """단일 체크 실행 (cron용)"""
+        print(f"[{datetime.now()}] Health Check 실행")
         
-        while True:
-            try:
-                results = self.run_checks()
-                self.save_status(results)
-                
-                if not results['healthy']:
-                    consecutive_failures += 1
-                    failed_checks = [
-                        f"{k}: {v['message']}" 
-                        for k, v in results['checks'].items() 
-                        if not v['status']
-                    ]
-                    reason = f"실패한 체크: {', '.join(failed_checks)}"
-                    
-                    print(f"[{datetime.now()}] 문제 감지 - {reason}")
-                    
-                    # 3회 연속 실패 시 재시작
-                    if consecutive_failures >= 3:
-                        self.restart_service(reason)
-                        consecutive_failures = 0
-                        time.sleep(60)  # 재시작 후 1분 대기
-                else:
-                    consecutive_failures = 0
-                    print(f"[{datetime.now()}] 모든 체크 통과")
-                
-            except KeyboardInterrupt:
-                print("Health Checker 종료")
-                break
-            except Exception as e:
-                print(f"체크 중 오류: {str(e)}")
+        try:
+            results = self.run_checks()
+            self.save_status(results)
             
-            time.sleep(self.check_interval)
+            if not results['healthy']:
+                failed_checks = [
+                    f"{k}: {v['message']}" 
+                    for k, v in results['checks'].items() 
+                    if not v['status']
+                ]
+                reason = f"실패한 체크: {', '.join(failed_checks)}"
+                
+                print(f"[{datetime.now()}] 문제 감지 - {reason}")
+                
+                # 연속 실패 횟수 확인
+                failure_count = self.get_failure_count()
+                failure_count += 1
+                self.save_failure_count(failure_count)
+                
+                # 3회 연속 실패 시 재시작
+                if failure_count >= 3:
+                    self.restart_service(reason)
+                    self.save_failure_count(0)
+            else:
+                self.save_failure_count(0)
+                print(f"[{datetime.now()}] 모든 체크 통과")
+                
+        except Exception as e:
+            print(f"체크 중 오류: {str(e)}")
+    
+    def get_failure_count(self):
+        """실패 횟수 읽기"""
+        failure_file = LOG_DIR / "health_check_failures.txt"
+        try:
+            if failure_file.exists():
+                return int(failure_file.read_text().strip())
+        except:
+            pass
+        return 0
+    
+    def save_failure_count(self, count):
+        """실패 횟수 저장"""
+        failure_file = LOG_DIR / "health_check_failures.txt"
+        try:
+            failure_file.write_text(str(count))
+        except Exception as e:
+            print(f"실패 횟수 저장 실패: {str(e)}")
+
+def main():
+    """메인 함수 - 중복 실행 방지"""
+    # Lock 파일 확인
+    lock_file_path = LOCK_FILE
+    
+    try:
+        # Lock 파일 열기 (없으면 생성)
+        lock_file_path.parent.mkdir(parents=True, exist_ok=True)
+        lock_file = open(lock_file_path, 'w')
+        
+        # Non-blocking lock 시도
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        
+        # Lock 획득 성공 - 실행
+        checker = HealthChecker()
+        checker.run_once()
+        
+        # Lock 해제
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+        lock_file.close()
+        
+    except IOError:
+        # 이미 실행 중
+        print(f"[{datetime.now()}] Health Check가 이미 실행 중입니다.")
+        sys.exit(0)
+    except Exception as e:
+        print(f"[{datetime.now()}] Health Check 실행 중 오류: {str(e)}")
+        sys.exit(1)
 
 if __name__ == "__main__":
-    checker = HealthChecker()
-    checker.run()
+    main()
