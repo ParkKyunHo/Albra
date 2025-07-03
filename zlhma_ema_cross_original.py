@@ -36,7 +36,7 @@ if not os.path.exists(cache_dir):
     os.makedirs(cache_dir, exist_ok=True)
 
 try:
-    from backtest_modules.fixed.data_fetcher_fixed import DataFetcherFixed
+    from data_fetcher_1h import DataFetcher1H
     print("✓ Import successful")
 except ImportError as e:
     print(f"❌ Import error: {e}")
@@ -932,17 +932,17 @@ def run_walk_forward_analysis(start_date: str = '2021-01-01', end_date: str = '2
     print(f"{'='*80}\n")
     
     # 데이터 가져오기
-    fetcher = DataFetcherFixed(use_cache=True)
+    fetcher = DataFetcher1H(use_cache=True)
     
     # 전체 기간 데이터 가져오기
     print(f"📊 Fetching complete dataset for BTC/USDT...")
-    df_4h, df_15m = fetcher.fetch_data('BTC/USDT', start_date, end_date)
+    df_1h, _ = fetcher.fetch_data('BTC/USDT', start_date, end_date)
     
-    if df_4h is None or len(df_4h) == 0:
+    if df_1h is None or len(df_1h) == 0:
         print("❌ Failed to fetch data")
         return
     
-    print(f"✅ Fetched {len(df_4h)} 1H candles")
+    print(f"✅ Fetched {len(df_1h)} 1H candles")
     
     # Walk-Forward 윈도우 설정
     quarters = [
@@ -975,7 +975,7 @@ def run_walk_forward_analysis(start_date: str = '2021-01-01', end_date: str = '2
         print(f"{'='*60}")
         
         # 해당 기간 데이터 추출
-        period_df = df_4h[(df_4h.index >= period_start) & (df_4h.index <= period_end)].copy()
+        period_df = df_1h[(df_1h.index >= period_start) & (df_1h.index <= period_end)].copy()
         
         if len(period_df) < 200:  # 최소 데이터 요구사항
             print(f"⚠️ Insufficient data for {period_name} (only {len(period_df)} candles)")
