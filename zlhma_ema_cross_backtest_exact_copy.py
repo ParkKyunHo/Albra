@@ -36,7 +36,7 @@ if not os.path.exists(cache_dir):
     os.makedirs(cache_dir, exist_ok=True)
 
 try:
-    from data_fetcher_1h import DataFetcher1H
+    from backtest_modules.fixed.data_fetcher_fixed import DataFetcherFixed
     print("✓ Import successful")
 except ImportError as e:
     print(f"❌ Import error: {e}")
@@ -931,7 +931,7 @@ def main():
     print("=" * 80)
     
     # 데이터 가져오기
-    fetcher = DataFetcher1H(use_cache=True)
+    fetcher = DataFetcherFixed(use_cache=True)
     
     # 기간 설정
     start_date = '2024-01-01'
@@ -940,19 +940,20 @@ def main():
     print(f"\n📊 Fetching BTC/USDT data from {start_date} to {end_date}...")
     
     try:
-        # DataFetcher1H는 두 개의 값을 반환 (1h, None)
-        df_1h, _ = fetcher.fetch_data('BTC/USDT', start_date, end_date)
+        # DataFetcherFixed는 두 개의 값을 반환 (4h, 15m) - 4h를 1h로 간주
+        df_4h, _ = fetcher.fetch_data('BTC/USDT', start_date, end_date)
         
-        if df_1h is None or len(df_1h) == 0:
+        if df_4h is None or len(df_4h) == 0:
             print("❌ Failed to fetch data")
             return
         
-        print(f"✅ Fetched {len(df_1h)} 1H candles")
-        print(f"  Price range: ${df_1h['close'].min():.0f} - ${df_1h['close'].max():.0f}")
+        print(f"✅ Fetched {len(df_4h)} candles (treating 4H as 1H for testing)")
+        print(f"  Price range: ${df_4h['close'].min():.0f} - ${df_4h['close'].max():.0f}")
+        print("⚠️ Note: Using 4H data as 1H. Results will differ from real 1H backtesting.")
         
         # 전략 실행
         strategy = ZLHMAEMACrossStrategy(initial_capital=10000, timeframe='1h', symbol='BTC/USDT')
-        report = strategy.backtest(df_1h, print_trades=True, plot_chart=False)
+        report = strategy.backtest(df_4h, print_trades=True, plot_chart=False)
         
         # 결과 출력
         print("\n" + "=" * 50)

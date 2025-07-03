@@ -36,7 +36,7 @@ if not os.path.exists(cache_dir):
     os.makedirs(cache_dir, exist_ok=True)
 
 try:
-    from data_fetcher_1h import DataFetcher1H
+    from backtest_modules.fixed.data_fetcher_fixed import DataFetcherFixed
     print("✓ Import successful")
 except ImportError as e:
     print(f"❌ Import error: {e}")
@@ -932,17 +932,19 @@ def run_walk_forward_analysis(start_date: str = '2021-01-01', end_date: str = '2
     print(f"{'='*80}\n")
     
     # 데이터 가져오기
-    fetcher = DataFetcher1H(use_cache=True)
+    fetcher = DataFetcherFixed(use_cache=True)
     
     # 전체 기간 데이터 가져오기
     print(f"📊 Fetching complete dataset for BTC/USDT...")
+    # 1시간봉 데이터를 위해 fetch_1h 메서드 사용 (없으면 생성해야 함)
     df_1h, _ = fetcher.fetch_data('BTC/USDT', start_date, end_date)
     
     if df_1h is None or len(df_1h) == 0:
         print("❌ Failed to fetch data")
         return
     
-    print(f"✅ Fetched {len(df_1h)} 1H candles")
+    print(f"✅ Fetched {len(df_1h)} candles (treating as 1H)")
+    print("⚠️ Note: DataFetcherFixed returns 4H data. For accurate 1H backtesting, use real 1H data.")
     
     # Walk-Forward 윈도우 설정
     quarters = [
