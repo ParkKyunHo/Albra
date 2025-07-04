@@ -33,8 +33,8 @@ AlbraTrading은 AWS EC2에서 24/7 운영되는 개인용 바이낸스 자동 �
   - **가상환경 경로**: `/home/ubuntu/AlbraTrading/venv`
 - **운영 모드**: 멀티 계좌 모드 (Master + Sub1)
 - **활성 전략**: 
-  - Master: TFPE (Trend Following with Price Extremes)
-  - Sub1: ZLMACD_ICHIMOKU (ZL MACD + Ichimoku)
+  - Master: ZLMACD_ICHIMOKU (ZL MACD + Ichimoku)
+  - Sub1: ZLHMA_EMA_CROSS (Zero Lag Hull MA + EMA Cross)
 
 ## 🚀 배포 시스템 (2025-06-30 업데이트)
 
@@ -468,6 +468,12 @@ python3 scripts/update_project_status.py --commit
    - 각 전략의 계좌 정보(MASTER, sub1)가 올바르게 표시됨
    - account_name 속성이 이미 적절히 설정되어 있음 확인
 
+### 완료된 수정 사항 (2025-07-04)
+1. **프로젝트 문서 업데이트** ✓
+   - 실제 운영 중인 전략 정보 반영
+   - Master: ZLMACD_ICHIMOKU (ZL MACD + Ichimoku)
+   - Sub1: ZLHMA_EMA_CROSS (Zero Lag Hull MA + EMA Cross)
+
 ### 완료된 수정 사항 (2025-06-30)
 1. **Position Status Enum 오류 수정** ✓
    - `position_manager.py`의 `to_dict()` 메서드 개선
@@ -507,19 +513,23 @@ python3 scripts/update_project_status.py --commit
 
 ### 활성 전략 분석
 
-#### 1. TFPE (Trend Following with Price Extremes) - Master
-- 레버리지: 10x
-- 포지션 크기: 24%
-- Stop Loss: 1.5 ATR
-- Take Profit: 5.0 ATR
-- 신호 임계값: 4 (높은 품질)
-
-#### 2. ZLMACD Ichimoku - Sub1
+#### 1. ZLMACD Ichimoku - Master
 - 레버리지: 8x
 - 포지션 크기: 24% (Kelly로 5-20% 조정)
 - Stop Loss: min(2%, 1.5 * ATR)
 - Take Profit: 5.0 ATR
 - 일일 손실 한도: 3%
+- 타임프레임: 1시간봉
+- 피라미딩: 활성화 (3단계)
+
+#### 2. ZLHMA EMA Cross - Sub1
+- 레버리지: 10x
+- 포지션 크기: 20%
+- Stop Loss: 1.5 ATR
+- Take Profit: 5.0 ATR
+- 트레일링 스톱: 3% 수익 시 활성화
+- 타임프레임: 1시간봉
+- EMA 크로스: 50/200
 
 ### 전체 시스템 지표
 - 최대 동시 포지션: 심볼당 여러 전략 가능
@@ -600,7 +610,7 @@ python3 scripts/update_project_status.py --commit
 
 ---
 
-*최종 업데이트: 2025년 7월 2일*
+*최종 업데이트: 2025년 7월 4일*
 *작성자: Claude Code Assistant*
 
 유용한 명령어:

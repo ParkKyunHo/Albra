@@ -12,8 +12,17 @@
   - src/: main_multi_account.py, smart_notification_manager.py
   - .claude/: SESSION_LOG.md
 
+- 2025-07-04 11:46:55 KST: [c76f70b] chore: EC2 로그 파일 정리 - 불필요한 파일 제거 및 압축
+  - .claude/: SESSION_LOG.md
+
+- 2025-07-04 11:48:00 KST: 프로젝트 문서 업데이트 - 실제 운영 중인 전략 정보 반영
+  - Master: ZLMACD_ICHIMOKU (ZL MACD + Ichimoku)
+  - Sub1: ZLHMA_EMA_CROSS (Zero Lag Hull MA + EMA Cross)
+  - CLAUDE.md, PROJECT_STATUS.md, SESSION_LOG.md 파일 업데이트
+
 ### 다음 작업
-- [ ] 계속 진행
+- [ ] 1시간마다 시스템 상태 리포트 수신 확인
+- [ ] POSITION_SYNC_ERROR 해결방안 검토
 
 ---
 

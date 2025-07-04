@@ -5,7 +5,7 @@
 - **설명**: AWS EC2에서 24/7 운영되는 바이낸스 자동 트레이딩 시스템
 - **시작일**: 2025년 이전
 - **현재 버전**: v2.0 (Multi-Account Edition)
-- **마지막 업데이트**: 2025-07-03 05:58:10
+- **마지막 업데이트**: 2025-07-04 11:48:00
 
 ## 🎯 프로젝트 목표
 1. 안정적인 24/7 자동 트레이딩 시스템 운영
@@ -88,9 +88,11 @@
 - 멀티 계좌 활성 계좌 카운팅 수정 (2025-07-02)
 
 ## 🏗️ 시스템 아키텍처
-- **운영 환경**: AWS EC2 t3.small (Ubuntu 24.04)
-- **런타임**: Python 3.12 (venv)
-- **주요 전략**: TFPE (Trend Following with Price Extremes)
+- **운영 환경**: AWS EC2 t3.small (Ubuntu 22.04)
+- **런타임**: Python 3.10.18 (venv)
+- **주요 전략**: 
+  - Master: ZLMACD_ICHIMOKU (ZL MACD + Ichimoku)
+  - Sub1: ZLHMA_EMA_CROSS (Zero Lag Hull MA + EMA Cross)
 - **데이터베이스**: SQLite (trading_bot.db)
 - **모니터링**: 텔레그램 봇 + 웹 대시보드
 
@@ -107,4 +109,4 @@
 - 작업 추적: `.claude/` 디렉토리 참조
 
 ---
-*자동 생성: 2025-07-02 09:49:12*
+*자동 생성: 2025-07-04 11:48:00*
