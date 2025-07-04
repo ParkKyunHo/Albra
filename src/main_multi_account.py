@@ -1059,65 +1059,87 @@ class MultiAccountTradingSystem:
     async def _periodic_status_report(self) -> None:
         """정기 상태 리포트"""
         report_interval = 3600  # 1시간
+        first_report_delay = 300  # 첫 리포트는 5분 후
         
+        # 첫 리포트를 5분 후에 전송
+        try:
+            await asyncio.sleep(first_report_delay)
+            await self._send_status_report()
+        except asyncio.CancelledError:
+            return
+        except Exception as e:
+            logger.error(f"첫 상태 리포트 오류: {e}")
+        
+        # 이후 1시간마다 정기 리포트 전송
         while self.running:
             try:
                 await asyncio.sleep(report_interval)
-                
-                if self.notification_manager:
-                    # 시스템 상태 요약
-                    metrics = self.metrics.to_dict()
-                    
-                    message = (
-                        f"<b>📊 시스템 상태 리포트</b>\n\n"
-                        f"<b>가동 시간:</b> {metrics['uptime_hours']}시간\n"
-                        f"<b>활성 포지션:</b> {len(self.unified_position_manager.get_active_positions()) if self.unified_position_manager else 0}개\n"
-                        f"<b>총 손익:</b> ${metrics['total_pnl']}\n"
-                        f"<b>메모리 사용:</b> {metrics['memory_usage_mb']} MB\n"
-                        f"<b>CPU 사용률:</b> {metrics['cpu_percent']}%\n"
-                        f"<b>오류 횟수:</b> {metrics['errors']}\n"
-                        f"<b>경고 횟수:</b> {metrics['warnings']}\n\n"
-                        f"<b>🧠 전략 실행 상태:</b>\n"
-                    )
-                    
-                    # 전략 정보 추가
-                    if self.strategies:
-                        for strategy in self.strategies:
-                            strategy_name = getattr(strategy, 'name', 'Unknown')
-                            account_name = getattr(strategy, 'account_name', 'N/A')
-                            is_running = getattr(strategy, 'is_running', False)
-                            status = "▶️ 실행중" if is_running else "⏸️ 정지"
-                            
-                            # 전략별 포지션 수 계산 (옵션)
-                            strategy_positions = 0
-                            if hasattr(self.unified_position_manager, 'get_positions_by_strategy'):
-                                positions = self.unified_position_manager.get_positions_by_strategy(strategy_name)
-                                strategy_positions = len([p for p in positions if p.status == 'ACTIVE'])
-                            
-                            message += f"• {strategy_name} ({account_name}): {status}"
-                            if strategy_positions > 0:
-                                message += f" - 포지션 {strategy_positions}개"
-                            message += "\n"
-                    else:
-                        message += "• 실행 중인 전략 없음\n"
-                    
-                    # 멀티 계좌 모드 정보
-                    if self.mode == OperationMode.MULTI:
-                        message += f"\n<b>💼 모드:</b> 멀티 계좌"
-                    else:
-                        message += f"\n<b>💼 모드:</b> 단일 계좌"
-                    
-                    await self.notification_manager.send_alert(
-                        event_type="STATUS_REPORT",
-                        title="📊 시스템 상태 리포트",
-                        message=message
-                    )
+                await self._send_status_report()
                 
             except asyncio.CancelledError:
                 break
             except Exception as e:
                 logger.error(f"상태 리포트 오류: {e}")
-                await asyncio.sleep(report_interval)
+                await asyncio.sleep(60)  # 오류 시 1분 후 재시도
+    
+    async def _send_status_report(self) -> None:
+        """상태 리포트 전송"""
+        if not self.notification_manager:
+            return
+        
+        try:
+            # 시스템 상태 요약
+            metrics = self.metrics.to_dict()
+            
+            message = (
+                f"<b>📊 시스템 상태 리포트</b>\n\n"
+                f"<b>가동 시간:</b> {metrics['uptime_hours']}시간\n"
+                f"<b>활성 포지션:</b> {len(self.unified_position_manager.get_active_positions()) if self.unified_position_manager else 0}개\n"
+                f"<b>총 손익:</b> ${metrics['total_pnl']}\n"
+                f"<b>메모리 사용:</b> {metrics['memory_usage_mb']} MB\n"
+                f"<b>CPU 사용률:</b> {metrics['cpu_percent']}%\n"
+                f"<b>오류 횟수:</b> {metrics['errors']}\n"
+                f"<b>경고 횟수:</b> {metrics['warnings']}\n\n"
+                f"<b>🧠 전략 실행 상태:</b>\n"
+            )
+            
+            # 전략 정보 추가
+            if self.strategies:
+                for strategy in self.strategies:
+                    strategy_name = getattr(strategy, 'name', 'Unknown')
+                    account_name = getattr(strategy, 'account_name', 'N/A')
+                    is_running = getattr(strategy, 'is_running', False)
+                    status = "▶️ 실행중" if is_running else "⏸️ 정지"
+                    
+                    # 전략별 포지션 수 계산 (옵션)
+                    strategy_positions = 0
+                    if hasattr(self.unified_position_manager, 'get_positions_by_strategy'):
+                        positions = self.unified_position_manager.get_positions_by_strategy(strategy_name)
+                        strategy_positions = len([p for p in positions if p.status == 'ACTIVE'])
+                    
+                    message += f"• {strategy_name} ({account_name}): {status}"
+                    if strategy_positions > 0:
+                        message += f" - 포지션 {strategy_positions}개"
+                    message += "\n"
+            else:
+                message += "• 실행 중인 전략 없음\n"
+            
+            # 멀티 계좌 모드 정보
+            if self.mode == OperationMode.MULTI:
+                message += f"\n<b>💼 모드:</b> 멀티 계좌"
+            else:
+                message += f"\n<b>💼 모드:</b> 단일 계좌"
+            
+            await self.notification_manager.send_alert(
+                event_type="STATUS_REPORT",
+                title="📊 시스템 상태 리포트",
+                message=message
+            )
+            
+            logger.info("시스템 상태 리포트 전송 완료")
+            
+        except Exception as e:
+            logger.error(f"상태 리포트 전송 실패: {e}")
     
     async def _attempt_auto_recovery(self) -> None:
         """자동 복구 시도"""

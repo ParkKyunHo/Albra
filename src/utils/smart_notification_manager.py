@@ -81,6 +81,7 @@ class SmartNotificationManager:
             'MANUAL_TRADE': AlertLevel.HIGH,  # 수동 거래 등록
             'MANUAL_CLOSE': AlertLevel.HIGH,  # 수동 거래 청산
             'MANUAL_MODIFIED': AlertLevel.HIGH,  # 수동 거래 수정
+            'STATUS_REPORT': AlertLevel.HIGH,  # 시스템 상태 리포트 - 즉시 전송
             
             # MEDIUM - 일반 정보
             'POSITION_MODIFIED': AlertLevel.MEDIUM,
