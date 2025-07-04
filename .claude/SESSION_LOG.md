@@ -12,6 +12,9 @@
 - 2025-07-05 02:53:32 KST: [296f69d] feat: ZLMACD Ichimoku 전략에 크로스 윈도우 방식 적용
   - .claude/: SESSION_LOG.md
 
+- 2025-07-05 02:56:28 KST: [200dc16] docs: 프로젝트 상태 및 TODO 업데이트 - 크로스 윈도우 구현 완료
+  - .claude/: PROJECT_STATUS.md, SESSION_LOG.md, TODO.md
+
 ### 다음 작업
 - [ ] 계속 진행
 
