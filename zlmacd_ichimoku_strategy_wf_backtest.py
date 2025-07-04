@@ -75,6 +75,11 @@ class ZLMACDIchimokuStrategy:
         self.highest_price = None  # 포지션 보유 중 최고가
         self.lowest_price = None  # 포지션 보유 중 최저가
         
+        # 크로스 윈도우 추적 변수
+        self.last_golden_cross_index = -999  # 마지막 골든크로스 인덱스
+        self.last_dead_cross_index = -999  # 마지막 데드크로스 인덱스
+        self.cross_window = 10  # 크로스 유효 기간 (10개 캔들)
+        
         # 거래 비용 (심볼에 따라 조정)
         self.symbol = symbol
         if 'XRP' in symbol:
@@ -264,9 +269,13 @@ class ZLMACDIchimokuStrategy:
         cloud_bottom = df['cloud_bottom'].iloc[index]
         
         if position_type == 'LONG':
-            # 1. ZL MACD 골든크로스
+            # 1. ZL MACD 골든크로스 (현재 또는 최근)
             if zlmacd > zlmacd_signal and zlmacd_prev <= zlmacd_signal_prev:
+                self.last_golden_cross_index = index  # 크로스 인덱스 저장
                 result['signals'].append('ZL_MACD_GOLDEN_CROSS')
+                result['strength'] += 1
+            elif index - self.last_golden_cross_index <= self.cross_window:
+                result['signals'].append('ZL_MACD_GOLDEN_CROSS_RECENT')
                 result['strength'] += 1
             
             # 2. 가격이 구름 위
@@ -282,12 +291,16 @@ class ZLMACDIchimokuStrategy:
             # 4. 구름이 상승 전환 (녹색)
             if df['cloud_color'].iloc[index] == 1:
                 result['signals'].append('BULLISH_CLOUD')
-                result['strength'] += 0.5
+                result['strength'] += 1
             
         else:  # SHORT
-            # 1. ZL MACD 데드크로스
+            # 1. ZL MACD 데드크로스 (현재 또는 최근)
             if zlmacd < zlmacd_signal and zlmacd_prev >= zlmacd_signal_prev:
+                self.last_dead_cross_index = index  # 크로스 인덱스 저장
                 result['signals'].append('ZL_MACD_DEAD_CROSS')
+                result['strength'] += 1
+            elif index - self.last_dead_cross_index <= self.cross_window:
+                result['signals'].append('ZL_MACD_DEAD_CROSS_RECENT')
                 result['strength'] += 1
             
             # 2. 가격이 구름 아래
@@ -303,10 +316,10 @@ class ZLMACDIchimokuStrategy:
             # 4. 구름이 하락 전환 (빨간색)
             if df['cloud_color'].iloc[index] == 0:
                 result['signals'].append('BEARISH_CLOUD')
-                result['strength'] += 0.5
+                result['strength'] += 1
         
-        # 최소 3개 이상의 주요 신호 필요
-        result['can_enter'] = result['strength'] >= 3
+        # 모든 4개 조건이 충족되어야 진입 가능
+        result['can_enter'] = result['strength'] >= 4
         
         return result
     

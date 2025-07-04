@@ -20,6 +20,9 @@
   - Sub1: ZLHMA_EMA_CROSS (Zero Lag Hull MA + EMA Cross)
   - CLAUDE.md, PROJECT_STATUS.md, SESSION_LOG.md 파일 업데이트
 
+- 2025-07-04 23:59:59 KST: [07deb93] docs: 프로젝트 문서 업데이트 - 실제 운영 전략 반영
+  - .claude/: PROJECT_STATUS.md, SESSION_LOG.md
+
 ### 다음 작업
 - [ ] 1시간마다 시스템 상태 리포트 수신 확인
 - [ ] POSITION_SYNC_ERROR 해결방안 검토
