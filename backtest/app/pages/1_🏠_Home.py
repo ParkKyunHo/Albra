@@ -4,6 +4,7 @@ Home/Dashboard Page
 
 import streamlit as st
 import pandas as pd
+import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
 from datetime import datetime, timedelta
@@ -113,7 +114,7 @@ else:
     demo_returns = pd.Series(
         index=demo_dates,
         data=100 * (1 + 0.0005 + 0.001 * pd.Series(range(len(demo_dates))).apply(
-            lambda x: pd.np.random.randn()
+            lambda x: np.random.randn()
         )).cumprod()
     )
     

@@ -5,7 +5,7 @@
 - **설명**: AWS EC2에서 24/7 운영되는 바이낸스 자동 트레이딩 시스템
 - **시작일**: 2025년 이전
 - **현재 버전**: v2.0 (Multi-Account Edition)
-- **마지막 업데이트**: 2025-07-05 20:31:48
+- **마지막 업데이트**: 2025-07-05 22:05:55
 
 ## 🎯 프로젝트 목표
 1. 안정적인 24/7 자동 트레이딩 시스템 운영
@@ -14,27 +14,35 @@
 4. Claude Code를 통한 효율적인 개발 워크플로우
 
 ## 📊 프로젝트 통계
-- **Python 파일**: 4726개
-- **테스트 파일**: 1409개
-- **문서 파일**: 40개
-- **설정 파일**: 55개
-- **총 코드 라인**: 2,409,414줄
+- **Python 파일**: 9377개
+- **테스트 파일**: 2259개
+- **문서 파일**: 50개
+- **설정 파일**: 81개
+- **총 코드 라인**: 4,367,320줄
 
 ## 🔀 Git 상태
 - **현재 브랜치**: main
-- **변경된 파일**: 2개
-- **마지막 커밋**: 2025-07-05 20:31:48
+- **변경된 파일**: 10개
+- **마지막 커밋**: 2025-07-05 21:59:33
 
 ### 최근 커밋
-- 3d044f5 test: CLAUDE.md 자동 업데이트 테스트 - src 파일 수정
+- a655db3 feat: Streamlit 백테스팅 플랫폼 구현
+- c214097 feat: 엔터프라이즈급 백테스팅 시스템 및 자연어 전략 빌더 구현
+- 50438ca docs: 자동 문서 업데이트 시스템 가이드 추가
+- da83830 test: CLAUDE.md 자동 업데이트 테스트 - src 파일 수정
 - 55b94b9 docs: 자동 업데이트된 프로젝트 문서
-- b8562b9 feat: 커밋 시 자동 문서 업데이트 시스템 구현
-- 880ea49 fix: 크로스 윈도우 방식 성과 분석 수정
-- 200dc16 docs: 프로젝트 상태 및 TODO 업데이트 - 크로스 윈도우 구현 완료
 
 ### 변경된 파일
-- M .claude/SESSION_LOG.md
--  M CLAUDE.md
+- ?? venv_linux/bin/jsonschema
+- ?? venv_linux/bin/plotly_get_chrome
+- ?? venv_linux/bin/pwiz.py
+- ?? venv_linux/bin/sample
+- ?? venv_linux/bin/streamlit
+- ?? venv_linux/bin/streamlit.cmd
+- ?? venv_linux/bin/watchmedo
+- ?? venv_linux/bin/websockets
+- ?? venv_linux/etc/
+- ?? venv_linux/share/jupyter/
 
 ## 🔧 시스템 구성 요소
 
@@ -102,4 +110,4 @@
 - 작업 추적: `.claude/` 디렉토리 참조
 
 ---
-*자동 생성: 2025-07-05 20:31:48*
+*자동 생성: 2025-07-05 22:05:55*

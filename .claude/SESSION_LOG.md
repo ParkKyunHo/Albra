@@ -5,6 +5,19 @@
 
 
 
+
+## 세션: 2025-07-06
+
+### 작업 요약
+
+- 2025-07-06 00:44:46 KST: [ef38401] fix: pandas 버전 호환성 이슈 수정
+  - .claude/: PROJECT_STATUS.md, SESSION_LOG.md
+
+### 다음 작업
+- [ ] 계속 진행
+
+---
+
 ## 세션: 2025-07-05
 
 ### 작업 요약
@@ -37,6 +50,8 @@
 - 2025-07-05 21:59:33 KST: [aecb037] feat: Streamlit 백테스팅 플랫폼 구현
   - .claude/: settings.local.json
 
+
+- 2025-07-05 22:05:55: Streamlit 백테스팅 플랫폼 구현 완료. pandas 버전 호환성 이슈 발견 (pd.np.random -> np.random 수정 필요)
 ### 다음 작업
 - [ ] 계속 진행
 
