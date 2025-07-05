@@ -397,6 +397,183 @@ python scripts/safe_restart.py --validate-state
 python scripts/generate_incident_report.py --incident-id XXX
 ```
 
+## 🧪 백테스팅 시스템 및 자연어 전략 빌더 (2025-01-30 구현)
+
+### 개요
+엔터프라이즈급 이벤트 기반 백테스팅 프레임워크를 구축했습니다. 사용자가 자연어로 설명한 전략을 자동으로 백테스트 가능한 코드로 변환할 수 있습니다.
+
+### 백테스팅 시스템 구조
+```
+backtest/
+├── core/                      # 핵심 엔진
+│   ├── engine.py             # 백테스팅 엔진 (이벤트 기반)
+│   ├── events.py             # 이벤트 클래스 (Market, Signal, Order, Fill)
+│   ├── portfolio.py          # 포트폴리오 관리
+│   └── data_feed.py          # 데이터 피드 관리
+├── strategies/               # 전략 프레임워크
+│   ├── base.py              # BaseStrategy 추상 클래스
+│   ├── indicators.py        # 기술적 지표 라이브러리
+│   ├── builder.py           # 자연어 전략 빌더 ⭐
+│   └── library/             # 구현된 전략들
+│       └── zlmacd_ichimoku.py
+├── execution/               # 주문 실행
+│   ├── broker.py           # 브로커 시뮬레이터
+│   └── costs.py            # 거래 비용 모델
+├── risk/                   # 리스크 관리
+│   ├── manager.py          # 리스크 매니저
+│   └── metrics.py          # 리스크 메트릭 계산
+└── analysis/              # 성과 분석
+    ├── performance.py     # 성과 메트릭
+    ├── visualization.py   # 차트 생성
+    └── walk_forward.py    # Walk-Forward 분석
+```
+
+### 자연어 전략 빌더 사용법
+
+#### 1. 기본 사용
+```python
+from backtest.strategies.builder import NaturalLanguageStrategyBuilder
+
+# 빌더 초기화
+builder = NaturalLanguageStrategyBuilder()
+
+# 자연어로 전략 설명
+description = """
+20일 이동평균선과 50일 이동평균선의 골든크로스에서 매수, 
+데드크로스에서 매도. 손절은 2%, 익절은 5%로 설정.
+"""
+
+# 전략 코드 생성
+code, blueprint = builder.build_strategy(description)
+
+# 생성된 코드를 파일로 저장
+with open('my_strategy.py', 'w') as f:
+    f.write(code)
+```
+
+#### 2. 지원하는 자연어 패턴
+
+##### 기술적 지표
+- `"20일 이동평균"` → SMA(20)
+- `"14일 RSI"` → RSI(14)
+- `"MACD 12, 26"` → MACD(12, 26, 9)
+- `"볼린저 밴드 20일 2표준편차"` → Bollinger(20, 2)
+- `"이치모쿠 구름"` → Ichimoku()
+
+##### 진입 조건
+- `"골든크로스에서 매수"` → Golden Cross Entry
+- `"RSI 30 이하에서 매수"` → RSI Oversold Entry
+- `"가격이 볼린저 상단 돌파시 매수"` → Breakout Entry
+- `"상승추세에서 매수"` → Trend Following Entry
+
+##### 청산 조건
+- `"손절 2%"` → Stop Loss 2%
+- `"익절 5%"` → Take Profit 5%
+- `"1.5 ATR 손절"` → ATR-based Stop Loss
+- `"트레일링 스톱"` → Trailing Stop
+
+##### 포지션 사이징
+- `"켈리 기준"` → Kelly Criterion
+- `"포지션 10%"` → Fixed Position Size
+- `"리스크 2%"` → Risk-based Sizing
+
+#### 3. 전략 예시
+
+```python
+# 예시 1: RSI 반전 전략
+description = """
+RSI가 30 이하로 과매도 상태일 때 매수, 70 이상으로 과매수 상태일 때 매도.
+ATR의 1.5배로 손절, 3배로 익절. 켈리 기준으로 포지션 사이징.
+"""
+
+# 예시 2: 볼린저 밴드 전략
+description = """
+볼린저 밴드 하단 터치 후 반등 시 매수, 상단 터치 후 하락 시 매도.
+트레일링 스톱 사용. 부분청산 활성화.
+"""
+
+# 예시 3: 이치모쿠 + MACD 전략
+description = """
+이치모쿠 구름 위에서 MACD 골든크로스 시 매수.
+구름 아래로 가격이 떨어지면 청산. 2% 손절, 10% 익절.
+일일 손실 한도 3%.
+"""
+```
+
+#### 4. 생성된 전략 백테스트
+
+```python
+from backtest.core.engine import Backtest
+
+# 생성된 전략 임포트
+from my_strategy import MAGoldenCross
+
+# 백테스트 실행
+backtest = Backtest(
+    strategy=MAGoldenCross(),
+    symbol='BTC/USDT',
+    timeframe='1h',
+    initial_capital=10000,
+    commission=0.001
+)
+
+results = backtest.run(
+    start_date='2024-01-01',
+    end_date='2024-12-31'
+)
+
+# 결과 시각화
+from backtest.analysis.visualization import plot_backtest_results
+plot_backtest_results(results)
+```
+
+### 자연어 전략 빌더 내부 구조
+
+1. **NLStrategyParser**: 자연어 파싱
+   - 정규표현식 기반 패턴 매칭
+   - 지표, 조건, 리스크 파라미터 추출
+   - 한국어/영어 동시 지원
+
+2. **StrategyGenerator**: 코드 생성
+   - 템플릿 기반 코드 생성
+   - BaseStrategy 상속 구조
+   - 타입 안전성 보장
+
+3. **Validation & Suggestions**: 검증 및 개선
+   - 생성된 코드 문법 검증
+   - 전략 개선 제안
+   - 리스크 관리 체크
+
+### 백테스팅 시스템 특징
+
+1. **이벤트 기반 아키텍처**
+   - MarketEvent → SignalEvent → OrderEvent → FillEvent
+   - 실제 거래와 동일한 흐름
+   - 슬리피지, 수수료 정확한 모델링
+
+2. **Walk-Forward Analysis**
+   - In-sample/Out-of-sample 검증
+   - 과최적화 방지
+   - 파라미터 안정성 테스트
+
+3. **포괄적인 성과 분석**
+   - Sharpe, Sortino, Calmar Ratio
+   - Maximum Drawdown 분석
+   - VaR, CVaR 계산
+   - 월별/연도별 수익률
+
+4. **시각화**
+   - 수익 곡선
+   - 드로다운 차트
+   - 거래 분포
+   - 월간 히트맵
+
+### 주의사항
+- 자연어 설명은 명확하고 구체적으로 작성
+- 생성된 코드는 반드시 검토 후 사용
+- 백테스트 결과와 실거래는 차이가 있을 수 있음
+- Walk-Forward Analysis로 전략 검증 권장
+
 ## 📋 작업 추적 시스템
 
 Claude가 프로젝트 상태를 지속적으로 추적할 수 있도록 `.claude/` 디렉토리에 작업 기록을 관리합니다.
