@@ -18,6 +18,13 @@
 - 2025-07-05 03:02:18 KST: [880ea49] fix: 크로스 윈도우 방식 성과 분석 수정
   - .claude/: PROJECT_STATUS.md, SESSION_LOG.md, TODO.md
 
+- 2025-07-05 20:30:33 KST: [b8562b9] feat: 커밋 시 자동 문서 업데이트 시스템 구현
+  - scripts/: update_all_docs.py
+  - .claude/: SESSION_LOG.md
+
+- 2025-07-05 20:31:12 KST: [a4f0fe6] docs: 자동 업데이트된 프로젝트 문서
+  - .claude/: PROJECT_STATUS.md, SESSION_LOG.md
+
 ### 다음 작업
 - [ ] 계속 진행
 

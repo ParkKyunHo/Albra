@@ -5,7 +5,7 @@
 - **설명**: AWS EC2에서 24/7 운영되는 바이낸스 자동 트레이딩 시스템
 - **시작일**: 2025년 이전
 - **현재 버전**: v2.0 (Multi-Account Edition)
-- **마지막 업데이트**: 2025-07-05 02:55:00
+- **마지막 업데이트**: 2025-07-05 20:30:34
 
 ## 🎯 프로젝트 목표
 1. 안정적인 24/7 자동 트레이딩 시스템 운영
@@ -14,26 +14,34 @@
 4. Claude Code를 통한 효율적인 개발 워크플로우
 
 ## 📊 프로젝트 통계
-- **Python 파일**: 151개
-- **테스트 파일**: 21개
-- **문서 파일**: 33개
-- **설정 파일**: 52개
-- **총 코드 라인**: 62,291줄
+- **Python 파일**: 4726개
+- **테스트 파일**: 1409개
+- **문서 파일**: 40개
+- **설정 파일**: 55개
+- **총 코드 라인**: 2,409,413줄
 
 ## 🔀 Git 상태
 - **현재 브랜치**: main
-- **변경된 파일**: 0개
-- **마지막 커밋**: 2025-07-05 02:53:32
+- **변경된 파일**: 9개
+- **마지막 커밋**: 2025-07-05 20:30:33
 
 ### 최근 커밋
+- b8562b9 feat: 커밋 시 자동 문서 업데이트 시스템 구현
+- 880ea49 fix: 크로스 윈도우 방식 성과 분석 수정
+- 200dc16 docs: 프로젝트 상태 및 TODO 업데이트 - 크로스 윈도우 구현 완료
 - 296f69d feat: ZLMACD Ichimoku 전략에 크로스 윈도우 방식 적용
-- 07deb93 fix: 15분봉 캐시 파일명 슬래시 문제 해결
-- f42b5f0 fix: 15분봉 데이터 수집을 위한 fetch_15m_data 메서드 구현
-- 4c09cba feat: ZLMACD Ichimoku Day Trading 백테스트 구현 - 15분봉, 4개 조건
-- 3b12c21 test: 3개 vs 4개 조건 비교 테스트 스크립트 추가
+- 07deb93 docs: 프로젝트 문서 업데이트 - 실제 운영 전략 반영
 
 ### 변경된 파일
-- 없음
+- M .claude/SESSION_LOG.md
+-  M .claude/settings.local.json
+- ?? analyze_btc_detailed.py
+- ?? analyze_btc_signals.py
+- ?? analyze_zlmacd_ichimoku.py
+- ?? temp_venv/
+- ?? test_4conditions.py
+- ?? venv_linux/
+- ?? zlmacd_ichimoku_daytrading_backtest.py
 
 ## 🔧 시스템 구성 요소
 
@@ -44,7 +52,7 @@
 - **template_strategy**: template_strategy.py
 - **zlhma_ema_cross_strategy**: zlhma_ema_cross_strategy.py
 
-### 핵심 모듈 (20개)
+### 핵심 모듈 (21개)
 - **mdd_manager_improved**: 최종 수정 2025-06-30
 - **candle_close_monitor**: 최종 수정 2025-06-27
 - **hybrid_trading_manager**: 최종 수정 2025-06-22
@@ -64,38 +72,27 @@
 ### 🚨 긴급 작업 (1개)
 - 없음
 
-### 🔴 높은 우선순위 (8개)
-- TFPE 백테스팅 실행 및 결과 분석
-- 백테스팅 결과 기반 전략 파라미터 최적화
-- 멀티 전략 동시 실행 시 리스크 관리 강화
-- 성능 모니터링 대시보드 개선
-- 실시간 차트 업데이트 최적화
-- 메모리 사용량 모니터링 추가
+### 🔴 높은 우선순위 (11개)
+- analyze_btc_detailed.py 크로스 윈도우 적용
+- 운영 전략(zlmacd_ichimoku_strategy.py)에 크로스 윈도우 적용
+- 1시간마다 시스템 상태 리포트 미수신 문제 확인
 
-### 🟡 중간 우선순위 (12개)
+### 🟡 중간 우선순위 (13개)
+- POSITION_SYNC_ERROR 해결방안 검토
 - 백테스트 모듈 리팩토링
 - 데이터 로더 성능 최적화
-- 병렬 처리 구현
 
 ### ✅ 최근 완료된 작업
 - ZLMACD Ichimoku 크로스 윈도우 방식 구현 (2025-07-05)
-  - 실제 성과 차이 미미함 (대부분 동일, WF_06에서 0.03% 차이)
-  - 기존 전략이 이미 효과적으로 작동하고 있었음
-  - 크로스 직후 다른 조건들도 빠르게 충족되어 추가 기회 제한적
 - ZLMACD Ichimoku 4개 조건 필수 변경 (2025-07-04)
 - ZLMACD Ichimoku Day Trading 백테스트 구현 (2025-07-04)
 - 프로젝트 문서 업데이트 - 실제 운영 전략 반영 (2025-07-04)
 - EC2 t3.micro → t3.small 업그레이드 (2025-07-03)
-- EC2 메모리 부족 문제 해결 - 스왑 파일 추가 (2025-07-03)
-- SSH 접속 timeout 문제 해결 (2025-07-03)
-- 시스템 포지션 인식 개선 (2025-07-03)
 
 ## 🏗️ 시스템 아키텍처
-- **운영 환경**: AWS EC2 t3.small (Ubuntu 22.04)
-- **런타임**: Python 3.10.18 (venv)
-- **주요 전략**: 
-  - Master: ZLMACD_ICHIMOKU (ZL MACD + Ichimoku)
-  - Sub1: ZLHMA_EMA_CROSS (Zero Lag Hull MA + EMA Cross)
+- **운영 환경**: AWS EC2 (Ubuntu 22.04)
+- **런타임**: Python 3.12 (venv)
+- **주요 전략**: TFPE (Trend Following with Price Extremes)
 - **데이터베이스**: SQLite (trading_bot.db)
 - **모니터링**: 텔레그램 봇 + 웹 대시보드
 
@@ -112,4 +109,4 @@
 - 작업 추적: `.claude/` 디렉토리 참조
 
 ---
-*자동 생성: 2025-07-05 02:55:00*
+*자동 생성: 2025-07-05 20:30:34*
