@@ -29,6 +29,9 @@
   - src/: main.py
   - .claude/: settings.local.json
 
+- 2025-07-05 20:32:38 KST: [ecc64a1] docs: 자동 문서 업데이트 시스템 가이드 추가
+  - docs/: AUTO_DOC_UPDATE_GUIDE.md
+
 ### 다음 작업
 - [ ] 계속 진행
 
