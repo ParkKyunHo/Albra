@@ -220,7 +220,7 @@ with tab2:
         # Generate demo results
         dates = pd.date_range(start=start_date, end=end_date, freq='D')
         returns = np.random.randn(len(dates)) * 0.02
-        equity_curve = initial_capital * (1 + returns).cumprod()
+        equity_curve = pd.Series(initial_capital * (1 + returns).cumprod(), index=dates)
         
         # Store results
         result_key = f"{symbol}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"

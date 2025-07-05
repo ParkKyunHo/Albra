@@ -13,6 +13,8 @@
 - 2025-07-06 00:44:46 KST: [ef38401] fix: pandas 버전 호환성 이슈 수정
   - .claude/: PROJECT_STATUS.md, SESSION_LOG.md
 
+- 2025-07-06 00:54:41 KST: [dcaccd1] fix: Streamlit 페이지 numpy array 타입 오류 수정
+
 ### 다음 작업
 - [ ] 계속 진행
 

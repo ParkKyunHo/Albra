@@ -506,10 +506,10 @@ with tab4:
                         portfolio_returns += strategy_returns[strategy] * weight
                 
                 # Calculate portfolio equity curve
-                portfolio_equity = 10000 * (1 + portfolio_returns).cumprod()
+                portfolio_equity = pd.Series(10000 * (1 + portfolio_returns).cumprod())
                 
                 # Calculate metrics
-                total_return = (portfolio_equity[-1] / 10000 - 1) * 100
+                total_return = (portfolio_equity.iloc[-1] / 10000 - 1) * 100
                 sharpe_ratio = np.sqrt(252) * portfolio_returns.mean() / portfolio_returns.std()
                 max_dd = ((portfolio_equity / portfolio_equity.cummax() - 1).min()) * 100
                 
