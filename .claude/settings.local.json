@@ -16,7 +16,8 @@
       "Bash(grep:*)",
       "Bash(mv:*)",
       "Bash(./scripts/deploy_wsl.sh:*)",
-      "Bash(pgrep:*)"
+      "Bash(pgrep:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": []
   }

@@ -19,14 +19,15 @@ Usage:
     results = backtest.run()
     
     # Natural language strategy
-    strategy = StrategyBuilder.from_text("Buy when RSI < 30")
+    builder = NaturalLanguageStrategyBuilder()
+    strategy_code, blueprint = builder.build_strategy("Buy when RSI < 30")
     backtest = Backtest(strategy=strategy)
     results = backtest.run()
 """
 
 from .core.engine import BacktestEngine, Backtest
 from .strategies.base import BaseStrategy
-from .strategies.builder import StrategyBuilder
+from .strategies.builder import NaturalLanguageStrategyBuilder
 
 __version__ = "1.0.0"
 __author__ = "AlbraTrading Team"
@@ -35,5 +36,5 @@ __all__ = [
     "BacktestEngine",
     "Backtest",
     "BaseStrategy", 
-    "StrategyBuilder"
+    "NaturalLanguageStrategyBuilder"
 ]

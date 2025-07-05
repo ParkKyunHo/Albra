@@ -406,7 +406,15 @@ class StrategyGenerator:
     
     def _load_template(self) -> str:
         """Load strategy code template."""
-        return '''
+        return '''"""
+Generated strategy from natural language description.
+"""
+
+from typing import Optional, Dict, Any, List
+from backtest.strategies.base import BaseStrategy, StrategyParameters
+from backtest.core.events import MarketEvent, SignalEvent
+
+
 class {class_name}(BaseStrategy):
     """
     {description}
@@ -430,6 +438,11 @@ class {class_name}(BaseStrategy):
     def name(self) -> str:
         """Strategy name."""
         return "{strategy_name}"
+    
+    @property
+    def required_indicators(self) -> List[str]:
+        """Required indicators for this strategy."""
+        return {required_indicators}
     
     def generate_signal(self, market_event: MarketEvent) -> Optional[SignalEvent]:
         """Generate trading signal."""
@@ -475,6 +488,9 @@ class {class_name}(BaseStrategy):
         position_size = blueprint.position_sizing.get('size', 0.1)
         use_trailing_stop = blueprint.risk_parameters.get('use_trailing_stop', False)
         
+        # Generate required indicators list
+        required_indicators = self._generate_required_indicators(blueprint.indicators)
+        
         # Fill template
         code = self.template.format(
             class_name=class_name,
@@ -485,6 +501,7 @@ class {class_name}(BaseStrategy):
             take_profit=take_profit,
             use_trailing_stop=str(use_trailing_stop),
             parameters=parameters,
+            required_indicators=required_indicators,
             indicator_calculations=indicator_calculations,
             entry_conditions=entry_conditions,
             exit_conditions=exit_conditions
@@ -502,6 +519,21 @@ class {class_name}(BaseStrategy):
                 lines.append(f"        self.{indicator['type'].lower()}_{param_name} = {param_value}")
         
         return '\n'.join(lines) if lines else "        pass"
+    
+    def _generate_required_indicators(self, indicators: List[Dict]) -> str:
+        """Generate list of required indicators."""
+        ind_list = []
+        for indicator in indicators:
+            ind_type = indicator['type'].lower()
+            ind_list.append(f"'{ind_type}'")
+        
+        # Add basic indicators that might be needed
+        if "'sma'" not in ind_list:
+            ind_list.append("'sma'")
+        if "'ema'" not in ind_list:
+            ind_list.append("'ema'")
+        
+        return '[' + ', '.join(ind_list) + ']'
     
     def _generate_indicator_calculations(self, indicators: List[Dict]) -> str:
         """Generate indicator calculation code."""
