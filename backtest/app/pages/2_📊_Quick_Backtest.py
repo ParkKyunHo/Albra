@@ -16,6 +16,8 @@ sys.path.append(str(Path(__file__).parent.parent.parent.parent))
 
 # Import our modules
 from backtest.strategies.builder import NaturalLanguageStrategyBuilder
+from backtest.strategies.claude_parser import HybridStrategyBuilder
+import os
 
 st.set_page_config(page_title="Quick Backtest - AlbraTrading", page_icon="📊", layout="wide")
 
@@ -133,7 +135,11 @@ ATR의 1.5배로 손절, 3배로 익절."""
         
         if nl_description:
             with st.expander("🔍 전략 분석 결과"):
-                builder = NaturalLanguageStrategyBuilder()
+                # Use HybridBuilder if Claude API is available
+                if os.getenv('ANTHROPIC_API_KEY'):
+                    builder = HybridStrategyBuilder(use_claude=True)
+                else:
+                    builder = NaturalLanguageStrategyBuilder()
                 try:
                     code, blueprint = builder.build_strategy(nl_description)
                     explanation = builder.explain_strategy(blueprint)

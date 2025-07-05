@@ -54,16 +54,27 @@ class NLStrategyParser:
     def _build_indicator_patterns(self) -> Dict[str, Dict[str, Any]]:
         """Build pattern mappings for technical indicators."""
         return {
-            # Moving Averages
-            r'(\d+)[-\s]?(day|period|기간)?\s*(이동평균|moving average|ma|sma)': {
+            # Moving Averages - Enhanced patterns
+            r'(\d+)[-\s]?(일|day|period|기간)?\s*(이동평균|이평선|moving average|ma|sma)': {
                 'type': 'SMA',
                 'params': ['period'],
                 'extract': lambda m: {'period': int(m.group(1))}
             },
-            r'(\d+)[-\s]?(day|period|기간)?\s*(지수이동평균|exponential moving average|ema)': {
+            r'(\d+)[-\s]?(일|day|period|기간)?\s*(지수이동평균|지수이평|exponential moving average|ema)': {
                 'type': 'EMA',
                 'params': ['period'],
                 'extract': lambda m: {'period': int(m.group(1))}
+            },
+            # Support for compound expressions
+            r'(단기|빠른|fast|short).*?(\d+).*?(이동평균|이평|ma)': {
+                'type': 'SMA',
+                'params': ['period'],
+                'extract': lambda m: {'period': int(m.group(2)), 'label': 'fast'}
+            },
+            r'(장기|느린|slow|long).*?(\d+).*?(이동평균|이평|ma)': {
+                'type': 'SMA',
+                'params': ['period'],
+                'extract': lambda m: {'period': int(m.group(2)), 'label': 'slow'}
             },
             r'(\d+),?\s*(\d+)\s*(macd|맥디)': {
                 'type': 'MACD',
@@ -71,8 +82,13 @@ class NLStrategyParser:
                 'extract': lambda m: {'fast': int(m.group(1)), 'slow': int(m.group(2))}
             },
             
-            # RSI
-            r'(\d+)[-\s]?(period|기간)?\s*(rsi|상대강도지수)': {
+            # RSI - Enhanced patterns
+            r'(\d+)[-\s]?(일|period|기간)?\s*(rsi|상대강도지수|알에스아이)': {
+                'type': 'RSI',
+                'params': ['period'],
+                'extract': lambda m: {'period': int(m.group(1))}
+            },
+            r'rsi\s*(\d+)': {  # Support RSI14 format
                 'type': 'RSI',
                 'params': ['period'],
                 'extract': lambda m: {'period': int(m.group(1))}
@@ -106,14 +122,23 @@ class NLStrategyParser:
     def _build_condition_patterns(self) -> Dict[str, Dict[str, Any]]:
         """Build pattern mappings for entry/exit conditions."""
         return {
-            # Crossover patterns
-            r'(golden cross|골든크로스|골든 크로스)': {
+            # Crossover patterns - Enhanced
+            r'(golden cross|골든크로스|골든 크로스|상향 돌파|상향돌파)': {
                 'type': 'GOLDEN_CROSS',
                 'condition': 'fast_ma > slow_ma and prev_fast_ma <= prev_slow_ma'
             },
-            r'(death cross|dead cross|데드크로스|데드 크로스)': {
+            r'(death cross|dead cross|데드크로스|데드 크로스|하향 돌파|하향돌파)': {
                 'type': 'DEATH_CROSS',
                 'condition': 'fast_ma < slow_ma and prev_fast_ma >= prev_slow_ma'
+            },
+            # Support Korean variations
+            r'(\S+).*?(\S+).*?(상향돌파|위로 교차|골든크로스)': {
+                'type': 'CUSTOM_CROSSOVER',
+                'extract': lambda m: {'indicator1': m.group(1), 'indicator2': m.group(2), 'direction': 'up'}
+            },
+            r'(\S+).*?(\S+).*?(하향돌파|아래로 교차|데드크로스)': {
+                'type': 'CUSTOM_CROSSUNDER',
+                'extract': lambda m: {'indicator1': m.group(1), 'indicator2': m.group(2), 'direction': 'down'}
             },
             
             # Price action

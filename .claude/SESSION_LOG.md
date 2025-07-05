@@ -15,6 +15,8 @@
 
 - 2025-07-06 00:54:41 KST: [dcaccd1] fix: Streamlit 페이지 numpy array 타입 오류 수정
 
+- 2025-07-06 01:04:58 KST: [c3c8ba6] feat: Claude API 통합 자연어 전략 빌더 구현
+
 ### 다음 작업
 - [ ] 계속 진행
 

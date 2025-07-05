@@ -12,14 +12,33 @@ from datetime import datetime
 sys.path.append(str(Path(__file__).parent.parent.parent.parent))
 
 from backtest.strategies.builder import NaturalLanguageStrategyBuilder
+from backtest.strategies.claude_parser import HybridStrategyBuilder
+import os
 
 st.set_page_config(page_title="Strategy Builder - AlbraTrading", page_icon="🔨", layout="wide")
 
 st.title("🔨 Strategy Builder")
 st.markdown("자연어로 설명하면 자동으로 트레이딩 전략을 생성합니다")
 
-# Initialize builder
-builder = NaturalLanguageStrategyBuilder()
+# Check for Claude API key
+has_claude_api = os.getenv('ANTHROPIC_API_KEY') is not None
+
+# Initialize builder based on API availability
+if has_claude_api:
+    builder = HybridStrategyBuilder(use_claude=True)
+    st.success("🤖 Claude API 연결됨 - 고급 자연어 처리 활성화")
+else:
+    builder = NaturalLanguageStrategyBuilder()
+    st.info("💡 Claude API 키가 없습니다. 기본 패턴 매칭을 사용합니다.")
+    with st.expander("Claude API 설정 방법"):
+        st.markdown("""
+        1. [Anthropic Console](https://console.anthropic.com/)에서 API 키 발급
+        2. 환경 변수 설정:
+        ```bash
+        export ANTHROPIC_API_KEY='your-api-key-here'
+        ```
+        3. Streamlit 재시작
+        """)
 
 # Sidebar - Examples
 with st.sidebar:
