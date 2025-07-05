@@ -32,7 +32,7 @@ AlbraTrading은 AWS EC2에서 24/7 운영되는 개인용 바이낸스 자동 �
   - **프로젝트 Python**: 3.10.18 (가상환경)
   - **가상환경 경로**: `/home/ubuntu/AlbraTrading/venv`
 - **운영 모드**: 멀티 계좌 모드 (Master + Sub1)
-- **활성 전략**: 
+- **활성 전략**: TFPE, MOMENTUM, ZLHMA_EMA_CROSS, ZLMACD_ICHIMOKU
   - Master: ZLMACD_ICHIMOKU (ZL MACD + Ichimoku)
   - Sub1: ZLHMA_EMA_CROSS (Zero Lag Hull MA + EMA Cross)
 
@@ -610,7 +610,7 @@ python3 scripts/update_project_status.py --commit
 
 ---
 
-*최종 업데이트: 2025년 7월 4일*
+*최종 업데이트: 2025년 07월 05일*
 *작성자: Claude Code Assistant*
 
 유용한 명령어:

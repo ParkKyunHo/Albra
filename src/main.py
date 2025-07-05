@@ -3,6 +3,7 @@
 """
 Albra Trading System - Main Entry Point
 전략 선택 및 실행 가능한 메인 모듈
+자동 문서 업데이트 시스템 적용됨 (2025-07-05)
 """
 
 import asyncio

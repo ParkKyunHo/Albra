@@ -15,7 +15,8 @@
       "Bash(scp:*)",
       "Bash(grep:*)",
       "Bash(mv:*)",
-      "Bash(./scripts/deploy_wsl.sh:*)"
+      "Bash(./scripts/deploy_wsl.sh:*)",
+      "Bash(pgrep:*)"
     ],
     "deny": []
   }
